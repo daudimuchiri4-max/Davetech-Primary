@@ -169,9 +169,19 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
     }
   };
 
-  const activeSlides: HeroSlide[] =
+  const businessKeywords = ['pos', 'retail', 'wholesale', 'hospital', 'church', 'ministry', 'fleet', 'asset management', 'procurement', 'erp'];
+  const rawActiveSlides: HeroSlide[] =
     content?.heroSlides && content.heroSlides.length > 0
-      ? content.heroSlides.filter((s) => s.isActive)
+      ? content.heroSlides.filter((s) => {
+          if (!s.isActive) return false;
+          const text = `${s.title} ${s.subtitle} ${s.badgeText}`.toLowerCase();
+          return !businessKeywords.some((kw) => text.includes(kw));
+        })
+      : [];
+
+  const activeSlides: HeroSlide[] =
+    rawActiveSlides.length > 0
+      ? rawActiveSlides
       : [
           {
             id: 'slide-1',
@@ -186,6 +196,28 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
             buttonText: 'Enroll Your Child (2026 Intake)',
             buttonLink: 'admission',
             order: 1,
+            isActive: true,
+          },
+          {
+            id: 'slide-2',
+            title: 'State-of-the-Art Science Labs & Coding Studios',
+            subtitle: 'Hands-on experiential learning where young scientists and tech innovators build robotics, automated agriculture, and digital solutions.',
+            imageUrl: 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1600&q=80',
+            badgeText: 'Junior School STEAM & Robotics Hub',
+            buttonText: 'Explore Facilities & Labs',
+            buttonLink: 'facilities',
+            order: 2,
+            isActive: true,
+          },
+          {
+            id: 'slide-3',
+            title: 'Nurturing Talent in Arts, Music & Olympic Swimming',
+            subtitle: 'Dedicated coaches and certified music tutors developing champion athletes, ballet performers, and musical virtuosos.',
+            imageUrl: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=1600&q=80',
+            badgeText: 'Holistic Co-Curricular & Sports Excellence',
+            buttonText: 'View Co-Curricular Programs',
+            buttonLink: 'gallery',
+            order: 3,
             isActive: true,
           },
         ];
@@ -362,10 +394,10 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
           </div>
           <div className="flex items-center gap-4 text-blue-200 shrink-0">
             <span className="flex items-center gap-1">
-              <Phone className="w-3 h-3" /> {content.contactPhone || school?.phone || '+254 700 000 000'}
+              <Phone className="w-3 h-3" /> {content.contactPhone || school?.phone || '+254 712 345 678'}
             </span>
             <span className="flex items-center gap-1 hidden md:inline-flex">
-              <Mail className="w-3 h-3" /> {content.contactEmail || school?.email || 'admissions@example-school.ac.ke'}
+              <Mail className="w-3 h-3" /> {content.contactEmail || school?.email || 'admissions@davetechprimary.ac.ke'}
             </span>
           </div>
         </div>
@@ -437,13 +469,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
             >
               FAQs
             </button>
-            <button
-              type="button"
-              onClick={() => setIsStaffLoginModalOpen(true)}
-              className="text-white font-extrabold flex items-center gap-1 hover:bg-blue-700 cursor-pointer bg-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-700 transition-colors"
-            >
-              <Briefcase className="w-3.5 h-3.5 text-amber-300" /> Staff Portal
-            </button>
+
           </nav>
 
           {/* Action Buttons: Staff Login & Google / Portal Login */}
@@ -501,13 +527,15 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
         onMouseLeave={() => setIsPaused(false)}
         className="relative bg-slate-900 text-white py-20 lg:py-32 overflow-hidden min-h-[560px] flex items-center"
       >
-        {currentSlide?.imageUrl && (
+        {activeSlides.map((slide, index) => (
           <div
-            key={currentSlide.id}
-            className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
-            style={{ backgroundImage: `url(${currentSlide.imageUrl})` }}
+            key={slide.id || index}
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
+              index === currentSlideIndex ? 'opacity-100 z-0' : 'opacity-0 z-0 pointer-events-none'
+            }`}
+            style={{ backgroundImage: `url(${slide.imageUrl})` }}
           />
-        )}
+        ))}
 
         {/* Subtle Bottom Scrim for Maximum Photo Visibility and High Contrast Typography */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none" />
@@ -619,16 +647,6 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
                 className="px-5 py-3 rounded-xl bg-slate-900/60 hover:bg-slate-900/85 text-white font-bold text-sm border border-white/30 transition-colors inline-flex items-center gap-2 backdrop-blur-xs shadow-xl cursor-pointer"
               >
                 <DollarSign className="w-4 h-4 text-amber-400" /> View 2026 Fee Structure
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  document.getElementById('facilities')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="px-5 py-3 rounded-xl bg-white/95 hover:bg-white text-slate-900 font-bold text-sm transition-colors inline-flex items-center gap-2 backdrop-blur-xs shadow-xl cursor-pointer border border-white/40"
-              >
-                <Compass className="w-4 h-4 text-emerald-600" />
-                <span>Explore Campus</span>
               </button>
             </div>
 
