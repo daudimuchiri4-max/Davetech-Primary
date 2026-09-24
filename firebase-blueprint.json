@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "School": {
+      "title": "School",
+      "description": "School details and configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role-based access",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "fullName": { "type": "string" },
+        "role": { "type": "string" },
+        "schoolId": { "type": "string" }
+      },
+      "required": ["id", "fullName", "role"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student record in the school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "admissionNumber": { "type": "string" },
+        "fullName": { "type": "string" },
+        "grade": { "type": "string" }
+      },
+      "required": ["id", "schoolId", "admissionNumber", "fullName"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Fee billing invoice for student",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "total": { "type": "number" }
+      },
+      "required": ["id", "schoolId", "studentId", "invoiceNumber"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment receipt record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "receiptNumber": { "type": "string" },
+        "amount": { "type": "number" }
+      },
+      "required": ["id", "schoolId", "studentId", "receiptNumber", "amount"]
+    }
+  },
+  "firestore": {
+    "/schools/{schoolId}": {
+      "schema": "School",
+      "description": "Schools root collection"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Global user accounts and profiles"
+    },
+    "/schools/{schoolId}/students/{studentId}": {
+      "schema": "Student",
+      "description": "Students enrolled in school"
+    },
+    "/schools/{schoolId}/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Invoices generated for fees"
+    },
+    "/schools/{schoolId}/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Receipts and payments"
+    }
+  }
+}

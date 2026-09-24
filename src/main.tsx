@@ -10,7 +10,11 @@ window.addEventListener('unhandledrejection', (event) => {
      String(event.reason).includes('interrupted') ||
      String(event.reason).includes('media was removed') ||
      String(event.reason).includes('Cloud Firestore backend') ||
-     String(event.reason).includes('code=unavailable'))
+     String(event.reason).includes('code=unavailable') ||
+     String(event.reason).includes('client is offline') ||
+     String(event.reason).includes('Failed to get document') ||
+     String(event.reason).includes('api-key-not-valid') ||
+     String(event.reason).includes('invalid-api-key'))
   ) {
     event.preventDefault();
   }

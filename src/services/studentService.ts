@@ -11,12 +11,13 @@ import {
   orderBy,
   limit,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, isFirebaseConfigured } from '../lib/firebase';
 import { Student, Parent, Staff, GradeLevel } from '../types';
-import { cleanForFirestore } from '../utils/firestoreHelper';
+import { cleanForFirestore, isOfflineError } from '../utils/firestoreHelper';
 
 export const studentService = {
   async getStudents(schoolId: string, options?: { classLevel?: GradeLevel; stream?: string; search?: string }): Promise<Student[]> {
+    if (!isFirebaseConfigured) return [];
     try {
       const colRef = collection(db, 'schools', schoolId, 'students');
       const snap = await getDocs(colRef);
@@ -45,13 +46,18 @@ export const studentService = {
         );
       }
       return list;
-    } catch (err) {
-      console.error('Error fetching students:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while fetching students:', err?.message || err);
+      } else {
+        console.warn('Notice fetching students:', err?.message || err);
+      }
       return [];
     }
   },
 
   async getStudentById(schoolId: string, studentId: string): Promise<Student | null> {
+    if (!isFirebaseConfigured) return null;
     try {
       const docRef = doc(db, 'schools', schoolId, 'students', studentId);
       const snap = await getDoc(docRef);
@@ -59,8 +65,12 @@ export const studentService = {
         return { ...snap.data(), id: snap.id } as Student;
       }
       return null;
-    } catch (err) {
-      console.error('Error fetching student by ID:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while fetching student:', err?.message || err);
+      } else {
+        console.warn('Notice fetching student by ID:', err?.message || err);
+      }
       return null;
     }
   },

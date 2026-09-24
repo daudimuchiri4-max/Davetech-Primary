@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setSchool(sch);
         }
       } catch (err) {
-        console.error('Init school error:', err);
+        console.warn('Init school notice:', err);
       }
     }
     init();

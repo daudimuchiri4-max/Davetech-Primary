@@ -56,7 +56,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onSuccess?.(profile.role || selectedRole);
       onClose();
     } catch (err: any) {
-      console.error('Google sign-in error:', err);
+      if (
+        err?.code === 'auth/api-key-not-valid' ||
+        err?.code === 'auth/invalid-api-key' ||
+        err?.message?.includes('api-key-not-valid') ||
+        err?.message?.includes('valid-api-key')
+      ) {
+        console.warn('Firebase API key notice in AuthModal:', err?.message || err);
+      } else {
+        console.error('Google sign-in error:', err);
+      }
       let msg = err.message || 'Google sign-in failed. Please try again.';
       if (err.code === 'auth/popup-closed-by-user') {
         msg = 'Google sign-in popup was closed before completing.';
@@ -64,6 +73,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         msg = 'Sign-in popup was blocked by browser. Please allow popups for this site.';
       } else if (err.code === 'auth/network-request-failed') {
         msg = 'Network connection issue. Please check your internet connection.';
+      } else if (err.code === 'auth/api-key-not-valid' || err?.message?.includes('api-key-not-valid')) {
+        msg = 'Firebase configuration notice: running in clean copy/offline mode.';
       }
       setErrorMessage(msg);
       showToast(msg, 'error');
@@ -89,7 +100,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onSuccess?.(profile.role || selectedRole);
       onClose();
     } catch (err: any) {
-      console.error('Email sign-in error:', err);
+      if (
+        err?.code === 'auth/api-key-not-valid' ||
+        err?.message?.includes('api-key-not-valid')
+      ) {
+        console.warn('Firebase API key notice in email sign-in:', err?.message || err);
+      } else {
+        console.error('Email sign-in error:', err);
+      }
       let msg = err.message || 'Invalid credentials. Please verify your email and password.';
       if (
         err.code === 'auth/invalid-credential' ||

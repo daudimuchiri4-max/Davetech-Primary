@@ -9,9 +9,9 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, isFirebaseConfigured } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
-import { cleanForFirestore } from '../utils/firestoreHelper';
+import { cleanForFirestore, isOfflineError } from '../utils/firestoreHelper';
 import { DEFAULT_SCHOOL_ID } from './schoolService';
 
 export interface CreateUserData {
@@ -49,6 +49,9 @@ export const userService = {
    * Fetch all user profiles from Firestore
    */
   async getUsers(schoolId: string = DEFAULT_SCHOOL_ID): Promise<UserProfile[]> {
+    if (!isFirebaseConfigured) {
+      return [];
+    }
     try {
       const colRef = collection(db, 'users');
       const snap = await getDocs(colRef);
@@ -59,8 +62,12 @@ export const userService = {
       
       // Return sorted by creation date or full name
       return users.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
-    } catch (err) {
-      console.error('Error fetching users from Firestore:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while fetching users:', err?.message || err);
+      } else {
+        console.warn('Notice fetching users from Firestore:', err?.message || err);
+      }
       return [];
     }
   },
@@ -69,6 +76,9 @@ export const userService = {
    * Get single user by ID
    */
   async getUserById(userId: string): Promise<UserProfile | null> {
+    if (!isFirebaseConfigured) {
+      return null;
+    }
     try {
       const docRef = doc(db, 'users', userId);
       const snap = await getDoc(docRef);
@@ -76,8 +86,12 @@ export const userService = {
         return { ...snap.data(), id: snap.id } as UserProfile;
       }
       return null;
-    } catch (err) {
-      console.error(`Error fetching user ${userId}:`, err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn(`Firestore offline while fetching user ${userId}:`, err?.message || err);
+      } else {
+        console.warn(`Notice fetching user ${userId}:`, err?.message || err);
+      }
       return null;
     }
   },
@@ -86,6 +100,9 @@ export const userService = {
    * Find a user profile by username or email or phone
    */
   async findUserByIdentifier(identifier: string): Promise<UserProfile | null> {
+    if (!isFirebaseConfigured) {
+      return null;
+    }
     try {
       const clean = identifier.trim().toLowerCase();
       const users = await this.getUsers();
@@ -97,8 +114,12 @@ export const userService = {
         return uEmail === clean || uName === clean || (cleanPhone.length >= 7 && uPhone.includes(cleanPhone));
       });
       return match || null;
-    } catch (err) {
-      console.error('Error finding user by identifier:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while finding user by identifier:', err?.message || err);
+      } else {
+        console.warn('Notice finding user by identifier:', err?.message || err);
+      }
       return null;
     }
   },
@@ -148,7 +169,13 @@ export const userService = {
       mustChangePassword: false,
     };
 
-    await setDoc(newDoc, cleanForFirestore(newUser));
+    if (isFirebaseConfigured) {
+      try {
+        await setDoc(newDoc, cleanForFirestore(newUser));
+      } catch (err) {
+        console.warn('Notice creating user in firestore:', err);
+      }
+    }
     return newUser;
   },
 
@@ -156,31 +183,49 @@ export const userService = {
    * Update existing user profile
    */
   async updateUser(userId: string, updates: Partial<UserProfile>): Promise<void> {
-    const docRef = doc(db, 'users', userId);
     if (updates.username) {
       updates.username = this.cleanUsername(updates.username);
     }
-    await updateDoc(docRef, cleanForFirestore(updates));
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'users', userId);
+        await updateDoc(docRef, cleanForFirestore(updates));
+      } catch (err) {
+        console.warn('Notice updating user in firestore:', err);
+      }
+    }
   },
 
   /**
    * Set or reset password for a user
    */
   async setUserPassword(userId: string, newPass: string): Promise<void> {
-    const docRef = doc(db, 'users', userId);
-    await updateDoc(docRef, cleanForFirestore({
-      plainPasswordForAdmin: newPass,
-      passwordHash: newPass,
-      mustChangePassword: false,
-    }));
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'users', userId);
+        await updateDoc(docRef, cleanForFirestore({
+          plainPasswordForAdmin: newPass,
+          passwordHash: newPass,
+          mustChangePassword: false,
+        }));
+      } catch (err) {
+        console.warn('Notice updating user password in firestore:', err);
+      }
+    }
   },
 
   /**
    * Delete a user profile
    */
   async deleteUser(userId: string): Promise<void> {
-    const docRef = doc(db, 'users', userId);
-    await deleteDoc(docRef);
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'users', userId);
+        await deleteDoc(docRef);
+      } catch (err) {
+        console.warn('Notice deleting user in firestore:', err);
+      }
+    }
   },
 
   /**

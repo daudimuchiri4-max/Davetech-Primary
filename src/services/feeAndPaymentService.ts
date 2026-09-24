@@ -7,10 +7,10 @@ import {
   deleteDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, isFirebaseConfigured } from '../lib/firebase';
 import { FeeStructure, Invoice, Payment, Student, GradeLevel } from '../types';
 import { studentService } from './studentService';
-import { cleanForFirestore } from '../utils/firestoreHelper';
+import { cleanForFirestore, isOfflineError } from '../utils/firestoreHelper';
 
 export interface BatchBillingOptions {
   academicYear: string;
@@ -205,6 +205,15 @@ export const DEFAULT_CBC_FEE_STRUCTURES: Omit<FeeStructure, 'schoolId' | 'create
 
 export const feeService = {
   async getFeeStructures(schoolId: string): Promise<FeeStructure[]> {
+    if (!isFirebaseConfigured) {
+      const cached = localStorage.getItem(`fee_structures_${schoolId}`);
+      if (cached !== null) {
+        try {
+          return JSON.parse(cached) as FeeStructure[];
+        } catch {}
+      }
+      return [];
+    }
     try {
       const snap = await getDocs(collection(db, 'schools', schoolId, 'feeStructures'));
       const list = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FeeStructure));
@@ -213,8 +222,12 @@ export const feeService = {
         localStorage.setItem(`fee_structures_${schoolId}`, JSON.stringify(list));
       } catch {}
       return list;
-    } catch (err) {
-      console.error('Error fetching fee structures:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while fetching fee structures:', err?.message || err);
+      } else {
+        console.warn('Notice fetching fee structures:', err?.message || err);
+      }
       const cached = localStorage.getItem(`fee_structures_${schoolId}`);
       if (cached !== null) {
         try {
@@ -295,6 +308,7 @@ export const feeService = {
   },
 
   async getInvoices(schoolId: string, options?: { studentId?: string; status?: string }): Promise<Invoice[]> {
+    if (!isFirebaseConfigured) return [];
     try {
       const snap = await getDocs(collection(db, 'schools', schoolId, 'invoices'));
       let list = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Invoice));
@@ -305,8 +319,12 @@ export const feeService = {
         list = list.filter((i) => i.status === options.status);
       }
       return list;
-    } catch (err) {
-      console.error('Error fetching invoices:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while fetching invoices:', err?.message || err);
+      } else {
+        console.warn('Notice fetching invoices:', err?.message || err);
+      }
       return [];
     }
   },
@@ -690,6 +708,7 @@ export const feeService = {
   },
 
   async getPayments(schoolId: string, options?: { studentId?: string; invoiceId?: string }): Promise<Payment[]> {
+    if (!isFirebaseConfigured) return [];
     try {
       const snap = await getDocs(collection(db, 'schools', schoolId, 'payments'));
       let list = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Payment));
@@ -700,20 +719,29 @@ export const feeService = {
         list = list.filter((p) => p.invoiceId === options.invoiceId);
       }
       return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } catch (err) {
-      console.error('Error fetching payments:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while fetching payments:', err?.message || err);
+      } else {
+        console.warn('Notice fetching payments:', err?.message || err);
+      }
       return [];
     }
   },
 
   async getPaymentById(schoolId: string, paymentId: string): Promise<Payment | null> {
+    if (!isFirebaseConfigured) return null;
     try {
       const docRef = doc(db, 'schools', schoolId, 'payments', paymentId);
       const snap = await getDoc(docRef);
       if (!snap.exists()) return null;
       return { ...snap.data(), id: snap.id } as Payment;
-    } catch (err) {
-      console.error('Error fetching payment by id:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while fetching payment by id:', err?.message || err);
+      } else {
+        console.warn('Notice fetching payment by id:', err?.message || err);
+      }
       return null;
     }
   },

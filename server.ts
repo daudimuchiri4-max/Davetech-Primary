@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import cors from 'cors';
@@ -159,7 +160,7 @@ app.post('/api/subscription/check', (req: Request, res: Response) => {
 });
 
 // Protected Provider Middleware for Sensitive Subscription Operations
-const verifySystemOwnerKey = (req: Request, res: Response, next: Function) => {
+const verifySystemOwnerKey = (req: Request, res: Response, next: NextFunction) => {
   const providedKey = req.headers['x-system-owner-key'] || req.body?.masterPasskey;
   if (!providedKey || typeof providedKey !== 'string') {
     return res.status(401).json({

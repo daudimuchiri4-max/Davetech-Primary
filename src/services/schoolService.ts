@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, limit } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, isFirebaseConfigured } from '../lib/firebase';
 import { School, SchoolLevelConfig, WebsiteContent } from '../types';
-import { cleanForFirestore } from '../utils/firestoreHelper';
+import { cleanForFirestore, isOfflineError } from '../utils/firestoreHelper';
 
 export const DEFAULT_LEVELS: SchoolLevelConfig[] = [
   { id: 'lvl-pg', name: 'Playgroup', category: 'Early Years', ageRange: '2 - 3 Yrs', order: 1 },
@@ -244,6 +244,19 @@ export const DEFAULT_WEBSITE_CONTENT: WebsiteContent = {
 
 export const schoolService = {
   async getSchool(schoolId: string = DEFAULT_SCHOOL_ID): Promise<School | null> {
+    if (!isFirebaseConfigured) {
+      const cached = localStorage.getItem(`school_${schoolId}`);
+      if (cached) {
+        try {
+          return JSON.parse(cached) as School;
+        } catch {
+          // ignore error
+        }
+      }
+      if (schoolId === DEFAULT_SCHOOL_ID) return DEFAULT_SCHOOL;
+      return null;
+    }
+
     try {
       const docRef = doc(db, 'schools', schoolId);
       const snap = await getDoc(docRef);
@@ -263,11 +276,19 @@ export const schoolService = {
       }
       if (schoolId === DEFAULT_SCHOOL_ID) return DEFAULT_SCHOOL;
       return null;
-    } catch (err) {
-      console.error('Error fetching school from firestore:', err);
+    } catch (err: any) {
+      if (isOfflineError(err)) {
+        console.warn('Firestore offline while fetching school, falling back to cache:', err?.message || err);
+      } else {
+        console.warn('Notice fetching school from firestore, using local state:', err?.message || err);
+      }
       const cached = localStorage.getItem(`school_${schoolId}`);
       if (cached) {
-        return JSON.parse(cached) as School;
+        try {
+          return JSON.parse(cached) as School;
+        } catch {
+          // ignore
+        }
       }
       if (schoolId === DEFAULT_SCHOOL_ID) return DEFAULT_SCHOOL;
       return null;
@@ -275,12 +296,15 @@ export const schoolService = {
   },
 
   async getAllSchools(): Promise<School[]> {
+    if (!isFirebaseConfigured) {
+      return [DEFAULT_SCHOOL];
+    }
     try {
       const snap = await getDocs(collection(db, 'schools'));
       return snap.docs.map((d) => d.data() as School);
-    } catch (err) {
-      console.error('Error fetching all schools:', err);
-      return [];
+    } catch (err: any) {
+      console.warn('Notice fetching all schools from firestore:', err?.message || err);
+      return [DEFAULT_SCHOOL];
     }
   },
 
@@ -291,10 +315,12 @@ export const schoolService = {
       updatedAt: new Date().toISOString(),
     });
 
-    try {
-      await setDoc(docRef, cleanedUpdates, { merge: true });
-    } catch (err) {
-      console.warn('Firestore setDoc failed for school, updating local cache:', err);
+    if (isFirebaseConfigured) {
+      try {
+        await setDoc(docRef, cleanedUpdates, { merge: true });
+      } catch (err) {
+        console.warn('Firestore setDoc failed for school, updating local cache:', err);
+      }
     }
 
     try {
@@ -313,8 +339,17 @@ export const schoolService = {
   },
 
   async createSchool(school: School): Promise<void> {
-    const docRef = doc(db, 'schools', school.id);
-    await setDoc(docRef, school);
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'schools', school.id);
+        await setDoc(docRef, school);
+      } catch (err) {
+        console.warn('Notice saving school to firestore:', err);
+      }
+    }
+    try {
+      localStorage.setItem(`school_${school.id}`, JSON.stringify(school));
+    } catch {}
   },
 
   async ensureDefaultSchool(): Promise<School> {

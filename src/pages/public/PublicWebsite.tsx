@@ -165,7 +165,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
         console.warn('Could not load Firestore fee structures, using defaults:', fsErr);
       }
     } catch (e) {
-      console.error('Error loading website content:', e);
+      console.warn('Notice loading website content:', e);
     }
   };
 

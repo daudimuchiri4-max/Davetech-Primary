@@ -17,6 +17,14 @@ const firebaseConfig = {
 // Initialize Firebase App singleton
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
+export const isFirebaseConfigured = Boolean(
+  firebaseConfigData.projectId &&
+  !firebaseConfigData.projectId.includes('YOUR_') &&
+  !firebaseConfigData.projectId.includes('placeholder') &&
+  firebaseConfigData.apiKey &&
+  !firebaseConfigData.apiKey.includes('YOUR_')
+);
+
 // Auth instance
 export const auth = getAuth(app);
 

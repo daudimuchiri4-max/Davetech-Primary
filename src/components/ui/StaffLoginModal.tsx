@@ -54,7 +54,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
       onSuccess?.(profile.role);
       onClose();
     } catch (err: any) {
-      console.error('Staff login error:', err);
+      console.warn('Staff login notice:', err?.message || err);
       const msg =
         err.message ||
         'Invalid Staff Username or Password. Please verify your credentials or contact the System Administrator.';
