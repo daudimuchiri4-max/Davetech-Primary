@@ -307,7 +307,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       </header>
 
       {/* Main Body */}
-      <div className="flex-1 flex overflow-hidden bg-white">
+      <div className="flex-1 flex flex-col lg:flex-row bg-white min-h-[calc(100vh-4rem)]">
         {/* Sidebar - Clean White Theme */}
         <aside
           className={`fixed inset-y-0 left-0 z-40 w-64 bg-white text-slate-700 border-r border-slate-200 shadow-xl transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col ${
