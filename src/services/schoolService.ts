@@ -22,7 +22,7 @@ export const DEFAULT_SCHOOL_ID = 'primary-school';
 
 export const DEFAULT_SCHOOL: School = {
   id: DEFAULT_SCHOOL_ID,
-  name: 'New Primary School',
+  name: 'Davetech School ERP',
   code: 'SCHOOL',
   motto: 'Excellence in Learning',
   address: '',
@@ -39,6 +39,7 @@ export const DEFAULT_SCHOOL: School = {
   primaryColor: '#1e3a8a', // Deep royal navy
   accentColor: '#ea580c', // Vibrant school orange
   logoUrl: '/school_logo.svg',
+  welcomeMessage: 'Welcome to the Central Administration & ERP Hub. Manage Playgroup through Grade 9 CBC assessments, student roll-call, term fees, POS sales, and communications in real-time.',
   termDates: {
     term1Start: '2026-01-05',
     term1End: '2026-04-03',

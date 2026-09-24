@@ -417,24 +417,28 @@ export const TeacherPortal: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 text-xs font-semibold gap-4">
+      <div className="flex border-b border-blue-100 text-xs font-semibold gap-2">
         <button
           onClick={() => setActiveTab('ATTENDANCE')}
-          className={`pb-3 px-1 border-b-2 cursor-pointer transition-colors ${
+          className={`pb-3 px-4 border-b-2 cursor-pointer transition-colors flex items-center gap-2 ${
             activeTab === 'ATTENDANCE'
-              ? 'border-blue-900 text-blue-900 font-bold'
-              : 'border-transparent text-slate-500'
+              ? 'border-blue-600 text-blue-700 font-bold bg-blue-50/80 rounded-t-xl'
+              : 'border-transparent text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-t-xl'
           }`}
         >
-          Daily Roll Call Attendance
+          <CalendarCheck className="w-4 h-4 text-blue-600" />
+          <span>Daily Roll Call Attendance</span>
         </button>
         <button
           onClick={() => setActiveTab('MARKS')}
-          className={`pb-3 px-1 border-b-2 cursor-pointer transition-colors ${
-            activeTab === 'MARKS' ? 'border-blue-900 text-blue-900 font-bold' : 'border-transparent text-slate-500'
+          className={`pb-3 px-4 border-b-2 cursor-pointer transition-colors flex items-center gap-2 ${
+            activeTab === 'MARKS'
+              ? 'border-blue-600 text-blue-700 font-bold bg-blue-50/80 rounded-t-xl'
+              : 'border-transparent text-slate-500 hover:text-blue-600 hover:bg-slate-50 rounded-t-xl'
           }`}
         >
-          Enter CBC Subject Scores
+          <Award className="w-4 h-4 text-blue-600" />
+          <span>Enter CBC Subject Scores</span>
         </button>
       </div>
 

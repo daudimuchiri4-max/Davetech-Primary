@@ -121,15 +121,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-slate-900 text-slate-300 flex flex-col z-40 transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-blue-950 text-blue-100 flex flex-col z-40 transition-transform duration-300 ease-in-out md:translate-x-0 ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full'
-        } border-r border-slate-800 shadow-xl`}
+        } border-r border-blue-900 shadow-xl`}
       >
         {/* Brand header */}
-        <div className="h-16 px-5 flex items-center justify-between border-b border-slate-800 shrink-0 bg-slate-950/60">
+        <div className="h-16 px-5 flex items-center justify-between border-b border-blue-900 shrink-0 bg-blue-900/90">
           <div className="flex items-center gap-2.5">
             {school?.logoUrl ? (
-              <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
+              <div className="w-9 h-9 rounded-xl bg-white border border-blue-700 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md">
                 <img
                   src={school.logoUrl}
                   alt={school.name}
@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
               </div>
             ) : (
-              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-md shrink-0 tracking-wider">
+              <div className="w-8 h-8 rounded-xl bg-white text-blue-950 flex items-center justify-center font-black text-xs shadow-md shrink-0 tracking-wider">
                 {school?.code ? school.code.slice(0, 4) : 'SCHOOLM'}
               </div>
             )}
@@ -146,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="font-bold text-white text-sm tracking-tight leading-none truncate">
                 {school?.name || 'Primary School ERP'}
               </div>
-              <div className="text-[10px] text-slate-400 mt-1">Playgroup — Grade 9</div>
+              <div className="text-[10px] text-blue-200 mt-1">Playgroup — Grade 9</div>
             </div>
           </div>
         </div>
@@ -155,7 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 custom-scrollbar text-xs">
           {navSections.map((section, idx) => (
             <div key={idx} className="space-y-1">
-              <div className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+              <div className="px-3 text-[10px] font-bold text-blue-300/80 uppercase tracking-wider mb-2">
                 {section.title}
               </div>
               {section.items.map((item) => {
@@ -168,11 +168,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70'
+                        : 'text-blue-200 hover:text-white hover:bg-blue-900/80'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className={isActive ? 'text-white' : 'text-slate-400'}>{item.icon}</span>
+                      <span className={isActive ? 'text-white' : 'text-blue-300'}>{item.icon}</span>
                       <span>{item.label}</span>
                     </div>
                     {isActive && <ChevronRight className="w-3.5 h-3.5 text-blue-200" />}
@@ -184,15 +184,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* School Footer info */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/50 shrink-0">
-          <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60">
+        <div className="p-3 border-t border-blue-900 bg-blue-950/90 shrink-0">
+          <div className="p-2.5 rounded-xl bg-blue-900/60 border border-blue-800">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-white line-clamp-1">{school?.code || 'KEA-01'}</span>
-              <span className="text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-800/80 px-1.5 py-0.5 rounded-md font-semibold">
+              <span className="text-[9px] bg-blue-800 text-blue-100 border border-blue-700 px-1.5 py-0.5 rounded-md font-semibold">
                 ACTIVE
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">Kenya CBC & CBE Compliant</p>
+            <p className="text-[10px] text-blue-200 mt-1 line-clamp-1">Kenya CBC & CBE Compliant</p>
           </div>
         </div>
       </aside>

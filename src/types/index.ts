@@ -85,6 +85,7 @@ export interface School {
   motto: string;
   logoUrl?: string;
   bannerUrl?: string;
+  welcomeMessage?: string;
   address: string;
   county?: string;
   phone: string;

@@ -371,12 +371,12 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
         </div>
       </div>
 
-      {/* Main Navigation Header with Logo & Section Links */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs">
+      {/* Main Navigation Header with Logo & Section Links - Blue Theme */}
+      <header className="sticky top-0 z-40 bg-blue-900 border-b border-blue-800 text-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-[64px] sm:h-18 py-2.5 sm:py-0 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             {schoolLogoUrl ? (
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-center p-1.5 overflow-hidden shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white border border-blue-700 shadow-xs flex items-center justify-center p-1.5 overflow-hidden shrink-0">
                 <img
                   src={schoolLogoUrl}
                   alt={school?.name || 'School Crest'}
@@ -385,28 +385,28 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
                 />
               </div>
             ) : (
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-blue-900 text-white flex items-center justify-center font-black text-xs sm:text-sm shadow-xs tracking-wider shrink-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white text-blue-950 flex items-center justify-center font-black text-xs sm:text-sm shadow-xs tracking-wider shrink-0">
                 {school?.code ? school.code.slice(0, 4) : 'SCHOOLM'}
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="font-black text-sm sm:text-base text-slate-900 tracking-tight leading-tight truncate">
+              <h1 className="font-black text-sm sm:text-base text-white tracking-tight leading-tight truncate">
                 {school?.name || 'Primary School ERP'}
               </h1>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
+              <p className="text-[10px] sm:text-[11px] text-blue-200 font-medium truncate">
                 {school?.motto || 'Nurturing Potential, Inspiring Excellence'}
               </p>
             </div>
           </div>
 
           {/* Center Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-slate-600">
+          <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-blue-100">
             <button
               type="button"
               onClick={() => {
                 document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="hover:text-blue-900 transition-colors cursor-pointer"
+              className="hover:text-white transition-colors cursor-pointer"
             >
               About
             </button>
@@ -415,7 +415,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
               onClick={() => {
                 document.getElementById('facilities')?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="hover:text-blue-900 transition-colors cursor-pointer"
+              className="hover:text-white transition-colors cursor-pointer"
             >
               Facilities
             </button>
@@ -424,7 +424,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
               onClick={() => {
                 document.getElementById('fees')?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="text-blue-900 flex items-center gap-1 hover:underline cursor-pointer"
+              className="text-amber-300 hover:text-amber-200 flex items-center gap-1 font-extrabold cursor-pointer"
             >
               <DollarSign className="w-3.5 h-3.5" /> Fee Structure
             </button>
@@ -433,16 +433,16 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
               onClick={() => {
                 document.getElementById('faqs')?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="hover:text-blue-900 transition-colors cursor-pointer"
+              className="hover:text-white transition-colors cursor-pointer"
             >
               FAQs
             </button>
             <button
               type="button"
               onClick={() => setIsStaffLoginModalOpen(true)}
-              className="text-blue-900 font-extrabold flex items-center gap-1 hover:underline cursor-pointer bg-blue-50 px-2 py-1 rounded-lg border border-blue-200/60"
+              className="text-white font-extrabold flex items-center gap-1 hover:bg-blue-700 cursor-pointer bg-blue-800 px-2.5 py-1.5 rounded-lg border border-blue-700 transition-colors"
             >
-              <Briefcase className="w-3.5 h-3.5 text-blue-900" /> Staff Portal
+              <Briefcase className="w-3.5 h-3.5 text-amber-300" /> Staff Portal
             </button>
           </nav>
 
@@ -451,10 +451,10 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
             <button
               type="button"
               onClick={() => setIsStaffLoginModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold shadow-xs transition-all cursor-pointer border border-blue-900"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-blue-950 text-xs font-black shadow-xs transition-all cursor-pointer border border-amber-300"
               title="Staff & Employee Portal Login (Username & Password)"
             >
-              <Briefcase className="w-3.5 h-3.5 text-amber-300" />
+              <Briefcase className="w-3.5 h-3.5 text-blue-950" />
               <span>Staff Login</span>
             </button>
 
@@ -464,7 +464,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
                 setAuthModalRole('SCHOOL_ADMIN');
                 setIsAuthModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold shadow-2xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-white bg-white hover:bg-blue-50 text-blue-950 text-xs font-bold shadow-xs transition-all cursor-pointer"
               title="Sign in with your registered Google Account or credentials"
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">

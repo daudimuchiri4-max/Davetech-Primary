@@ -170,6 +170,7 @@ export const SettingsView: React.FC = () => {
     name: DEFAULT_SCHOOL.name,
     code: DEFAULT_SCHOOL.code,
     motto: DEFAULT_SCHOOL.motto,
+    welcomeMessage: DEFAULT_SCHOOL.welcomeMessage || '',
     logoUrl: DEFAULT_SCHOOL.logoUrl || '',
     bannerUrl: DEFAULT_SCHOOL.bannerUrl || '',
     address: DEFAULT_SCHOOL.address,
@@ -620,6 +621,16 @@ export const SettingsView: React.FC = () => {
                     onChange={(e) => updateField('motto', e.target.value)}
                     className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-slate-800"
                     placeholder="e.g. Nurturing Potential, Inspiring Excellence"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="font-semibold text-slate-700">ERP Dashboard Welcome Message</label>
+                  <textarea
+                    rows={2}
+                    value={formData.welcomeMessage || ''}
+                    onChange={(e) => updateField('welcomeMessage', e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-slate-800"
+                    placeholder="e.g. Welcome to the Central Administration & ERP Hub. Manage Playgroup through Grade 9 CBC assessments..."
                   />
                 </div>
               </div>
