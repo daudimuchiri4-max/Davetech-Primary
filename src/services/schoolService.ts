@@ -38,6 +38,27 @@ export const DEFAULT_SCHOOL: School = {
   levels: DEFAULT_LEVELS,
   primaryColor: '#1e3a8a', // Deep royal navy
   accentColor: '#ea580c', // Vibrant school orange
+  themeSettings: {
+    preset: 'default-blue',
+    primaryColor: '#2563eb',
+    secondaryColor: '#4f46e5',
+    accentColor: '#059669',
+    sidebarColor: '#ffffff',
+    headerColor: '#2563eb',
+    backgroundColor: '#ffffff',
+    cardColor: '#ffffff',
+    textColor: '#0f172a',
+    buttonColor: '#2563eb',
+    buttonTextColor: '#ffffff',
+    faviconUrl: '',
+    loginLogoUrl: '',
+    loginBackgroundUrl: '',
+    mode: 'light',
+    sidebarDensity: 'comfortable',
+    borderRadius: 'rounded-xl',
+    buttonStyle: 'shadowed',
+    applyToPublicWebsite: true,
+  },
   logoUrl: '/school_logo.svg',
   welcomeMessage: 'Welcome to the Central Administration & ERP Hub. Manage Playgroup through Grade 9 CBC assessments, student roll-call, term fees, POS sales, and communications in real-time.',
   termDates: {

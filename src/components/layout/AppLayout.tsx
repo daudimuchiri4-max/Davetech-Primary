@@ -74,6 +74,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     loadSub();
   }, [school?.id]);
 
+  useEffect(() => {
+    if (school?.themeSettings) {
+      const t = school.themeSettings;
+      const root = document.documentElement;
+      if (t.primaryColor) root.style.setProperty('--primary-color', t.primaryColor);
+      if (t.secondaryColor) root.style.setProperty('--secondary-color', t.secondaryColor);
+      if (t.accentColor) root.style.setProperty('--accent-color', t.accentColor);
+      if (t.sidebarColor) root.style.setProperty('--sidebar-color', t.sidebarColor);
+      if (t.headerColor) root.style.setProperty('--header-color', t.headerColor);
+      if (t.backgroundColor) root.style.setProperty('--background-color', t.backgroundColor);
+      if (t.cardColor) root.style.setProperty('--card-color', t.cardColor);
+      if (t.textColor) root.style.setProperty('--text-color', t.textColor);
+      if (t.buttonColor) root.style.setProperty('--button-color', t.buttonColor);
+      if (t.buttonTextColor) root.style.setProperty('--button-text-color', t.buttonTextColor);
+    }
+  }, [school?.themeSettings]);
+
   const schoolNameDisplay =
     school?.name &&
     school.name !== 'Davetech Primary School' &&

@@ -7,7 +7,7 @@ import { compressImage } from '../../utils/imageCompressor';
 import { printerService, PrinterConfig, PaperWidth } from '../../services/printerService';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { School, SchoolLevelConfig, TermDatesConfig, PaymentSettingsConfig, CBCGradingConfig, SystemPreferencesConfig } from '../../types';
+import { School, SchoolLevelConfig, TermDatesConfig, PaymentSettingsConfig, CBCGradingConfig, SystemPreferencesConfig, ThemeSettingsConfig } from '../../types';
 import {
   Settings,
   Save,
@@ -52,6 +52,7 @@ import {
 
 type SettingsTab =
   | 'general'
+  | 'theme'
   | 'terms'
   | 'levels'
   | 'financial'
@@ -308,6 +309,161 @@ export const SettingsView: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
+  const updateThemeSettings = (key: keyof ThemeSettingsConfig, val: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      themeSettings: {
+        ...(prev.themeSettings || {
+          preset: 'default-blue',
+          primaryColor: '#2563eb',
+          secondaryColor: '#4f46e5',
+          accentColor: '#059669',
+          sidebarColor: '#ffffff',
+          headerColor: '#2563eb',
+          backgroundColor: '#ffffff',
+          cardColor: '#ffffff',
+          textColor: '#0f172a',
+          buttonColor: '#2563eb',
+          buttonTextColor: '#ffffff',
+          mode: 'light',
+          sidebarDensity: 'comfortable',
+          borderRadius: 'rounded-xl',
+          buttonStyle: 'shadowed',
+          applyToPublicWebsite: true,
+        }),
+        [key]: val,
+      },
+    }));
+    setHasUnsavedChanges(true);
+  };
+
+  const applyPresetTheme = (presetName: string) => {
+    let newTheme: Partial<ThemeSettingsConfig> = {};
+    switch (presetName) {
+      case 'emerald':
+        newTheme = {
+          preset: 'emerald',
+          primaryColor: '#059669',
+          secondaryColor: '#047857',
+          accentColor: '#10b981',
+          sidebarColor: '#ffffff',
+          headerColor: '#059669',
+          backgroundColor: '#ffffff',
+          cardColor: '#ffffff',
+          textColor: '#0f172a',
+          buttonColor: '#059669',
+          buttonTextColor: '#ffffff',
+        };
+        break;
+      case 'purple':
+        newTheme = {
+          preset: 'purple',
+          primaryColor: '#7c3aed',
+          secondaryColor: '#6d28d9',
+          accentColor: '#8b5cf6',
+          sidebarColor: '#ffffff',
+          headerColor: '#7c3aed',
+          backgroundColor: '#ffffff',
+          cardColor: '#ffffff',
+          textColor: '#0f172a',
+          buttonColor: '#7c3aed',
+          buttonTextColor: '#ffffff',
+        };
+        break;
+      case 'teal':
+        newTheme = {
+          preset: 'teal',
+          primaryColor: '#0d9488',
+          secondaryColor: '#0f766e',
+          accentColor: '#14b8a6',
+          sidebarColor: '#ffffff',
+          headerColor: '#0d9488',
+          backgroundColor: '#ffffff',
+          cardColor: '#ffffff',
+          textColor: '#0f172a',
+          buttonColor: '#0d9488',
+          buttonTextColor: '#ffffff',
+        };
+        break;
+      case 'orange':
+        newTheme = {
+          preset: 'orange',
+          primaryColor: '#ea580c',
+          secondaryColor: '#c2410c',
+          accentColor: '#f97316',
+          sidebarColor: '#ffffff',
+          headerColor: '#ea580c',
+          backgroundColor: '#ffffff',
+          cardColor: '#ffffff',
+          textColor: '#0f172a',
+          buttonColor: '#ea580c',
+          buttonTextColor: '#ffffff',
+        };
+        break;
+      case 'red':
+        newTheme = {
+          preset: 'red',
+          primaryColor: '#dc2626',
+          secondaryColor: '#b91c1c',
+          accentColor: '#ef4444',
+          sidebarColor: '#ffffff',
+          headerColor: '#dc2626',
+          backgroundColor: '#ffffff',
+          cardColor: '#ffffff',
+          textColor: '#0f172a',
+          buttonColor: '#dc2626',
+          buttonTextColor: '#ffffff',
+        };
+        break;
+      case 'professional-dark':
+        newTheme = {
+          preset: 'professional-dark',
+          primaryColor: '#3b82f6',
+          secondaryColor: '#6366f1',
+          accentColor: '#10b981',
+          sidebarColor: '#0f172a',
+          headerColor: '#0f172a',
+          backgroundColor: '#090d16',
+          cardColor: '#1e293b',
+          textColor: '#f8fafc',
+          buttonColor: '#3b82f6',
+          buttonTextColor: '#ffffff',
+          mode: 'dark',
+        };
+        break;
+      default:
+        newTheme = {
+          preset: 'default-blue',
+          primaryColor: '#2563eb',
+          secondaryColor: '#4f46e5',
+          accentColor: '#059669',
+          sidebarColor: '#ffffff',
+          headerColor: '#2563eb',
+          backgroundColor: '#ffffff',
+          cardColor: '#ffffff',
+          textColor: '#0f172a',
+          buttonColor: '#2563eb',
+          buttonTextColor: '#ffffff',
+          mode: 'light',
+        };
+        break;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      themeSettings: {
+        ...(prev.themeSettings || {}),
+        ...newTheme,
+      } as ThemeSettingsConfig,
+    }));
+    setHasUnsavedChanges(true);
+    showToast(`Applied preset theme: ${presetName}`, 'success');
+  };
+
+  const handleResetTheme = () => {
+    applyPresetTheme('default-blue');
+    showToast('Theme reset to default blue settings', 'info');
+  };
+
   const handleLogoUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       showToast('Please select a valid image file (PNG, JPG, SVG)', 'warning');
@@ -425,6 +581,7 @@ export const SettingsView: React.FC = () => {
 
   const tabs: { id: SettingsTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'general', label: 'School Profile & Logo', icon: SchoolIcon },
+    { id: 'theme', label: 'Theme & Appearance', icon: Palette },
     { id: 'terms', label: 'Academic Terms & Dates', icon: Calendar },
     { id: 'levels', label: 'CBC Grade Levels', icon: Layers },
     { id: 'financial', label: 'Finance & Tuition Accounts', icon: CreditCard },
@@ -503,6 +660,330 @@ export const SettingsView: React.FC = () => {
 
       {/* Main Settings Form Container */}
       <div className="space-y-6">
+        {/* TAB: THEME & APPEARANCE */}
+        {activeTab === 'theme' && (
+          <div className="space-y-6">
+            {/* Header info card */}
+            <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="space-y-1 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2">
+                  <Palette className="w-5 h-5 text-blue-300" />
+                  <h3 className="font-bold text-lg">Tenant Theme & Visual Branding</h3>
+                </div>
+                <p className="text-xs text-blue-200">
+                  Customize colors, typography, logos, and UI appearance for your school ERP and public website independently.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetTheme}
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 text-xs"
+                >
+                  Reset Defaults
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  loading={saving}
+                  onClick={() => handleSave()}
+                  className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold"
+                >
+                  Save Theme
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left 2 Cols: Controls */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Preset Themes */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    Preset Color Themes
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { id: 'default-blue', name: 'Default Blue', color: '#2563eb' },
+                      { id: 'emerald', name: 'Emerald Green', color: '#059669' },
+                      { id: 'purple', name: 'Royal Purple', color: '#7c3aed' },
+                      { id: 'teal', name: 'Ocean Teal', color: '#0d9488' },
+                      { id: 'orange', name: 'Sunset Orange', color: '#ea580c' },
+                      { id: 'red', name: 'Crimson Red', color: '#dc2626' },
+                      { id: 'professional-dark', name: 'Professional Dark', color: '#0f172a' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => applyPresetTheme(preset.id)}
+                        className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer ${
+                          formData.themeSettings?.preset === preset.id
+                            ? 'border-blue-600 bg-blue-50/50 shadow-xs ring-2 ring-blue-600/20'
+                            : 'border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-full shadow-inner flex items-center justify-center text-white font-bold text-xs" style={{ backgroundColor: preset.color }}>
+                          ✓
+                        </div>
+                        <span className="text-xs font-bold text-slate-800">{preset.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Color Pickers */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-blue-900" />
+                    Advanced Color Tokens & Palette
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {[
+                      { label: 'Primary Color', key: 'primaryColor', desc: 'Main branding' },
+                      { label: 'Secondary Color', key: 'secondaryColor', desc: 'Gradients & badges' },
+                      { label: 'Accent Color', key: 'accentColor', desc: 'Highlights & alerts' },
+                      { label: 'Sidebar Color', key: 'sidebarColor', desc: 'Navigation panel' },
+                      { label: 'Header Color', key: 'headerColor', desc: 'Top bar' },
+                      { label: 'Background Color', key: 'backgroundColor', desc: 'App backdrop' },
+                      { label: 'Card Color', key: 'cardColor', desc: 'Surfaces & boxes' },
+                      { label: 'Text Color', key: 'textColor', desc: 'Typography' },
+                      { label: 'Button Color', key: 'buttonColor', desc: 'Primary CTAs' },
+                    ].map((item) => {
+                      const val = (formData.themeSettings as any)?.[item.key] || '#2563eb';
+                      return (
+                        <div key={item.key} className="space-y-1.5 p-3 rounded-xl border border-slate-100 bg-slate-50/50">
+                          <label className="text-xs font-bold text-slate-700 block">{item.label}</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={val}
+                              onChange={(e) => updateThemeSettings(item.key as any, e.target.value)}
+                              className="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0 bg-transparent"
+                            />
+                            <input
+                              type="text"
+                              value={val}
+                              onChange={(e) => updateThemeSettings(item.key as any, e.target.value)}
+                              className="w-full text-xs font-mono font-bold text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1.5 uppercase"
+                            />
+                          </div>
+                          <span className="text-[10px] text-slate-400 block">{item.desc}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Branding & Assets */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <SchoolIcon className="w-4 h-4 text-blue-900" />
+                    Branding Assets & Typography
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">School Name</label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => updateField('name', e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-blue-600"
+                        placeholder="e.g. Davetech School ERP"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Motto / Tagline</label>
+                      <input
+                        type="text"
+                        value={formData.motto}
+                        onChange={(e) => updateField('motto', e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-blue-600"
+                        placeholder="e.g. Excellence in Learning"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">School Logo URL</label>
+                      <input
+                        type="text"
+                        value={formData.logoUrl || ''}
+                        onChange={(e) => updateField('logoUrl', e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-blue-600"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Favicon URL</label>
+                      <input
+                        type="text"
+                        value={formData.themeSettings?.faviconUrl || ''}
+                        onChange={(e) => updateThemeSettings('faviconUrl', e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-blue-600"
+                        placeholder="https://... favicon"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Login Page Logo URL</label>
+                      <input
+                        type="text"
+                        value={formData.themeSettings?.loginLogoUrl || ''}
+                        onChange={(e) => updateThemeSettings('loginLogoUrl', e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-blue-600"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Login Page Background URL</label>
+                      <input
+                        type="text"
+                        value={formData.themeSettings?.loginBackgroundUrl || ''}
+                        onChange={(e) => updateThemeSettings('loginBackgroundUrl', e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-blue-600"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Appearance Controls & Public Website Toggle */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-blue-900" />
+                    Appearance Controls & Public Website Branding
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Theme Mode</label>
+                      <select
+                        value={formData.themeSettings?.mode || 'light'}
+                        onChange={(e) => updateThemeSettings('mode', e.target.value as any)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                      >
+                        <option value="light">Light Mode</option>
+                        <option value="dark">Dark Mode</option>
+                        <option value="system">System Default</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Sidebar Density</label>
+                      <select
+                        value={formData.themeSettings?.sidebarDensity || 'comfortable'}
+                        onChange={(e) => updateThemeSettings('sidebarDensity', e.target.value as any)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                      >
+                        <option value="comfortable">Comfortable</option>
+                        <option value="compact">Compact</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Border Radius</label>
+                      <select
+                        value={formData.themeSettings?.borderRadius || 'rounded-xl'}
+                        onChange={(e) => updateThemeSettings('borderRadius', e.target.value as any)}
+                        className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800"
+                      >
+                        <option value="rounded-sm">Sharp (SM)</option>
+                        <option value="rounded-md">Subtle (MD)</option>
+                        <option value="rounded-lg">Standard (LG)</option>
+                        <option value="rounded-xl">Modern (XL)</option>
+                        <option value="rounded-2xl">Extra Soft (2XL)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 block">Apply Theme to Public Website</span>
+                      <span className="text-[11px] text-slate-500">Automatically sync school colors and branding to the public landing page & admissions portal.</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.themeSettings?.applyToPublicWebsite ?? true}
+                        onChange={(e) => updateThemeSettings('applyToPublicWebsite', e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Col: Live Preview Widget */}
+              <div className="space-y-6">
+                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-md sticky top-20 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-emerald-600" />
+                      Live Theme Preview
+                    </h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      Real-Time
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500">
+                    This mini preview updates instantly as you modify colors and branding.
+                  </p>
+
+                  {/* Simulated ERP Window */}
+                  <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm" style={{ backgroundColor: formData.themeSettings?.backgroundColor || '#ffffff', color: formData.themeSettings?.textColor || '#0f172a' }}>
+                    {/* Simulated Header */}
+                    <div className="h-12 px-3 flex items-center justify-between text-white text-xs font-bold" style={{ backgroundColor: formData.themeSettings?.headerColor || '#2563eb' }}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-[10px]">ERP</div>
+                        <span>{formData.name || 'Davetech ERP'}</span>
+                      </div>
+                      <div className="text-[10px] bg-white/20 px-2 py-0.5 rounded">Term 1 2026</div>
+                    </div>
+
+                    <div className="flex h-48 text-[11px]">
+                      {/* Simulated Sidebar */}
+                      <div className="w-24 p-2 space-y-1.5 border-r border-slate-200/60" style={{ backgroundColor: formData.themeSettings?.sidebarColor || '#ffffff' }}>
+                        <div className="p-1.5 rounded-lg bg-blue-600 text-white font-semibold text-[10px]">Dashboard</div>
+                        <div className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 text-[10px]">Students</div>
+                        <div className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 text-[10px]">Fees</div>
+                        <div className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 text-[10px]">Settings</div>
+                      </div>
+
+                      {/* Simulated Main Content Area */}
+                      <div className="flex-1 p-3 space-y-2 overflow-y-auto" style={{ backgroundColor: formData.themeSettings?.backgroundColor || '#ffffff' }}>
+                        <div className="p-2 rounded-xl border border-slate-200 shadow-xs" style={{ backgroundColor: formData.themeSettings?.cardColor || '#ffffff' }}>
+                          <span className="text-[10px] text-slate-400 block font-medium">Total Enrollment</span>
+                          <span className="text-sm font-black" style={{ color: formData.themeSettings?.primaryColor || '#2563eb' }}>680 Learners</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="px-3 py-1 rounded-lg text-white font-bold text-[10px] shadow-sm"
+                            style={{ backgroundColor: formData.themeSettings?.buttonColor || '#2563eb', color: formData.themeSettings?.buttonTextColor || '#ffffff' }}
+                          >
+                            Primary Action
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      loading={saving}
+                      onClick={() => handleSave()}
+                      className="w-full text-xs font-bold"
+                    >
+                      Save All Changes
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TAB 1: GENERAL & BRANDING */}
         {activeTab === 'general' && (
           <div className="space-y-6">

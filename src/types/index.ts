@@ -78,6 +78,28 @@ export interface SystemPreferencesConfig {
   enableGoogleAuth?: boolean;
 }
 
+export interface ThemeSettingsConfig {
+  preset?: string; // 'default-blue' | 'emerald' | 'purple' | 'teal' | 'orange' | 'red' | 'professional-dark' | 'custom'
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  sidebarColor: string;
+  headerColor: string;
+  backgroundColor: string;
+  cardColor: string;
+  textColor: string;
+  buttonColor: string;
+  buttonTextColor: string;
+  faviconUrl?: string;
+  loginLogoUrl?: string;
+  loginBackgroundUrl?: string;
+  mode?: 'light' | 'dark' | 'system';
+  sidebarDensity?: 'comfortable' | 'compact';
+  borderRadius?: 'rounded-sm' | 'rounded-md' | 'rounded-lg' | 'rounded-xl' | 'rounded-2xl';
+  buttonStyle?: 'flat' | 'soft' | 'shadowed' | 'pill';
+  applyToPublicWebsite?: boolean;
+}
+
 export interface School {
   id: string;
   name: string;
@@ -99,6 +121,7 @@ export interface School {
   levels: SchoolLevelConfig[];
   primaryColor?: string;
   accentColor?: string;
+  themeSettings?: ThemeSettingsConfig;
   termDates?: TermDatesConfig;
   paymentSettings?: PaymentSettingsConfig;
   cbcGradingSettings?: CBCGradingConfig;
