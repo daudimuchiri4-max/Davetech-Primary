@@ -1742,11 +1742,11 @@ export const SettingsView: React.FC = () => {
               </div>
             </div>
 
-            {/* Inactivity & Google Authentication Security Section */}
+            {/* Inactivity & Authentication Security Section */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <h3 className="font-bold text-sm text-slate-900">Session Security & Google Authentication</h3>
+                <h3 className="font-bold text-sm text-slate-900">Session Security & Access Governance</h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -1774,19 +1774,14 @@ export const SettingsView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="font-semibold text-slate-700">Google Authentication (SSO)</label>
-                  <label className="flex items-center gap-3 p-3 mt-1 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100/60">
-                    <input
-                      type="checkbox"
-                      checked={formData.systemPreferences?.enableGoogleAuth ?? true}
-                      onChange={(e) => updatePreferences('enableGoogleAuth', e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-900 focus:ring-blue-500"
-                    />
+                  <label className="font-semibold text-slate-700">Account Authentication Mode</label>
+                  <div className="flex items-center gap-3 p-3 mt-1 bg-blue-50/70 rounded-xl border border-blue-200">
+                    <ShieldCheck className="w-5 h-5 text-blue-800 shrink-0" />
                     <div>
-                      <span className="font-semibold text-xs text-slate-900 block">Allow Google Account Sign-In</span>
-                      <span className="text-[11px] text-slate-500">Staff, teachers, and parents can use Gmail / Google Workspace</span>
+                      <span className="font-bold text-xs text-blue-950 block">Username & Password Login Enforced</span>
+                      <span className="text-[11px] text-blue-900/80">All clients, staff, and parents sign in exclusively with credentials created in Roles & Permissions (Google login removed).</span>
                     </div>
-                  </label>
+                  </div>
                 </div>
               </div>
             </div>
