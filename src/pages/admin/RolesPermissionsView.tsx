@@ -137,6 +137,134 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
   const [slipUser, setSlipUser] = useState<UserProfile | null>(null);
   const [slipPassword, setSlipPassword] = useState<string>('');
 
+  // 5. Edit User Account Modal
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState<boolean>(false);
+  const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
+  const [editUserForm, setEditUserForm] = useState<{
+    fullName: string;
+    username: string;
+    email: string;
+    phone: string;
+    role: string;
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    newPassword: string;
+    showPassword: boolean;
+  }>({
+    fullName: '',
+    username: '',
+    email: '',
+    phone: '',
+    role: 'TEACHER',
+    status: 'ACTIVE',
+    newPassword: '',
+    showPassword: false,
+  });
+  const [savingEditUser, setSavingEditUser] = useState<boolean>(false);
+
+  // 6. Delete User Account Modal
+  const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState<boolean>(false);
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [deletingUser, setDeletingUser] = useState<boolean>(false);
+
+  // Password Visibility & Quick Credential Copy States
+  const [showAllPasswords, setShowAllPasswords] = useState<boolean>(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+
+  const togglePasswordVisibility = (userId: string) => {
+    setVisiblePasswords((prev) => ({ ...prev, [userId]: !prev[userId] }));
+  };
+
+  const getUserPassword = (u: UserProfile): string => {
+    return (
+      u.plainPasswordForAdmin ||
+      u.passwordHash ||
+      (u.role === 'SUPER_ADMIN'
+        ? 'Admin@2026'
+        : u.role === 'ACCOUNTANT' || u.role === 'CASHIER'
+        ? 'Bursar@2026'
+        : u.role === 'TEACHER'
+        ? '123456'
+        : u.role === 'PARENT'
+        ? 'Parent@2026'
+        : 'Password@2026')
+    );
+  };
+
+  const copyCredentials = (u: UserProfile) => {
+    const pass = getUserPassword(u);
+    const text = `School Portal Credentials:\nUsername: ${u.username || u.email}\nPassword: ${pass}\nRole: ${u.role}\nWebsite: ${window.location.origin}`;
+    navigator.clipboard.writeText(text);
+    setCopiedUserId(u.id);
+    showToast(`Credentials for ${u.fullName} copied!`, 'success');
+    setTimeout(() => setCopiedUserId(null), 2500);
+  };
+
+  const handleOpenEditUser = (u: UserProfile) => {
+    setUserToEdit(u);
+    setEditUserForm({
+      fullName: u.fullName || '',
+      username: u.username || u.email.split('@')[0],
+      email: u.email || '',
+      phone: u.phone || '',
+      role: u.role || 'TEACHER',
+      status: u.status || 'ACTIVE',
+      newPassword: '',
+      showPassword: false,
+    });
+    setIsEditUserModalOpen(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userToEdit) return;
+    setSavingEditUser(true);
+    try {
+      await userService.updateUser(userToEdit.id, {
+        fullName: editUserForm.fullName.trim(),
+        username: editUserForm.username.trim(),
+        email: editUserForm.email.trim(),
+        phone: editUserForm.phone.trim() || undefined,
+        role: editUserForm.role as UserRole,
+        status: editUserForm.status,
+      });
+
+      if (editUserForm.newPassword?.trim()) {
+        await userService.setUserPassword(userToEdit.id, editUserForm.newPassword.trim());
+      }
+
+      showToast(`User account for ${editUserForm.fullName} updated!`, 'success');
+      setIsEditUserModalOpen(false);
+      setUserToEdit(null);
+      await loadUsers();
+    } catch (err: any) {
+      showToast('Error updating user: ' + err.message, 'error');
+    } finally {
+      setSavingEditUser(false);
+    }
+  };
+
+  const handleOpenDeleteUser = (u: UserProfile) => {
+    setUserToDelete(u);
+    setIsDeleteUserModalOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeletingUser(true);
+    try {
+      await userService.deleteUser(userToDelete.id);
+      showToast(`User ${userToDelete.fullName} removed permanently.`, 'info');
+      setIsDeleteUserModalOpen(false);
+      setUserToDelete(null);
+      await loadUsers();
+    } catch (err: any) {
+      showToast('Error deleting user: ' + err.message, 'error');
+    } finally {
+      setDeletingUser(false);
+    }
+  };
+
   useEffect(() => {
     if (!school?.id) return;
     loadRoles();
@@ -1181,6 +1309,15 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
                 Refresh
               </Button>
               <Button
+                variant={showAllPasswords ? 'primary' : 'outline'}
+                size="sm"
+                icon={showAllPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                onClick={() => setShowAllPasswords(!showAllPasswords)}
+                className="text-xs font-bold"
+              >
+                {showAllPasswords ? 'Mask All Passwords' : 'Show All Passwords'}
+              </Button>
+              <Button
                 variant="primary"
                 size="sm"
                 icon={<UserPlus className="w-4 h-4" />}
@@ -1199,6 +1336,23 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
                   <tr className="bg-slate-900 text-white font-bold">
                     <th className="p-3.5">User Identity & Name</th>
                     <th className="p-3.5">Login Username & Email</th>
+                    <th className="p-3.5 min-w-[210px] bg-slate-800">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="flex items-center gap-1">
+                          <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Login Password</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowAllPasswords(!showAllPasswords)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-[10px] font-bold text-amber-300 transition-colors cursor-pointer"
+                          title={showAllPasswords ? 'Mask all passwords' : 'Show all passwords'}
+                        >
+                          {showAllPasswords ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                          <span>{showAllPasswords ? 'Mask' : 'Show All'}</span>
+                        </button>
+                      </div>
+                    </th>
                     <th className="p-3.5">Assigned School Role</th>
                     <th className="p-3.5 text-center">Status</th>
                     <th className="p-3.5 text-right">Credential Actions</th>
@@ -1207,7 +1361,7 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
                 <tbody className="divide-y divide-slate-100">
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-slate-400">
+                      <td colSpan={6} className="p-8 text-center text-slate-400">
                         No user logins found matching your filter criteria.
                       </td>
                     </tr>
@@ -1239,6 +1393,39 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
                               @{u.username || u.email.split('@')[0]}
                             </div>
                             <div className="text-[10px] text-slate-500 mt-0.5">{u.email}</div>
+                          </td>
+
+                          <td className="p-3.5 bg-slate-50/50">
+                            {(() => {
+                              const isVisible = showAllPasswords || !!visiblePasswords[u.id];
+                              const pass = getUserPassword(u);
+                              const isCopied = copiedUserId === u.id;
+
+                              return (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <div className="inline-flex items-center gap-1.5 bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-mono text-[11px] font-bold text-slate-900 select-all shadow-2xs">
+                                    <KeyRound className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+                                    <span>{isVisible ? pass : '••••••••'}</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => togglePasswordVisibility(u.id)}
+                                    className="p-1.5 text-slate-600 hover:text-blue-900 hover:bg-white rounded-lg transition-colors cursor-pointer border border-slate-200 bg-slate-100"
+                                    title={isVisible ? 'Hide password' : 'Show password'}
+                                  >
+                                    {isVisible ? <EyeOff className="w-3.5 h-3.5 text-slate-500" /> : <Eye className="w-3.5 h-3.5 text-blue-900" />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyCredentials(u)}
+                                    className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer border border-slate-200 bg-slate-100"
+                                    title="Copy username and password to clipboard"
+                                  >
+                                    {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           <td className="p-3.5">
@@ -1290,6 +1477,16 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
 
                           <td className="p-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {/* Edit User Details & Role */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditUser(u)}
+                                className="p-1.5 text-blue-700 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-blue-200/80 bg-white"
+                                title="Edit User Profile & Role"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+
                               {/* Reset Password Button */}
                               <Button
                                 variant="outline"
@@ -1304,10 +1501,20 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
                               <button
                                 type="button"
                                 onClick={() => handlePrintSlip(u)}
-                                className="p-1.5 text-slate-500 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-slate-200"
+                                className="p-1.5 text-slate-500 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-slate-200 bg-white"
                                 title="Print Login Credential Slip"
                               >
                                 <Printer className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Delete User Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeleteUser(u)}
+                                className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer border border-rose-200 bg-white"
+                                title="Delete User Account"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -1674,16 +1881,34 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
 
           {/* User Details Callout */}
           {selectedUserForReset && (
-            <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl flex items-center justify-between">
-              <div>
-                <div className="font-bold text-slate-900 text-xs">{selectedUserForReset.fullName}</div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                  Username: @{selectedUserForReset.username || selectedUserForReset.email.split('@')[0]}
+            <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-slate-900 text-xs">{selectedUserForReset.fullName}</div>
+                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                    Username: @{selectedUserForReset.username || selectedUserForReset.email.split('@')[0]}
+                  </div>
+                </div>
+                <Badge variant="primary" size="sm">
+                  {selectedUserForReset.role}
+                </Badge>
+              </div>
+              <div className="pt-1.5 border-t border-blue-200/60 flex items-center justify-between text-[11px]">
+                <span className="text-slate-600 font-medium">Current Password:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono font-black text-blue-950 bg-white px-2 py-0.5 rounded border border-blue-200 select-all">
+                    {getUserPassword(selectedUserForReset)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyCredentials(selectedUserForReset)}
+                    className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded"
+                    title="Copy credentials"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-              <Badge variant="primary" size="sm">
-                {selectedUserForReset.role}
-              </Badge>
             </div>
           )}
 
@@ -1833,6 +2058,231 @@ export const RolesPermissionsView: React.FC<RolesPermissionsViewProps> = ({ onNa
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* ============================================================= */}
+      {/* MODAL 5: EDIT USER ACCOUNT MODAL                               */}
+      {/* ============================================================= */}
+      <Modal
+        isOpen={isEditUserModalOpen}
+        onClose={() => setIsEditUserModalOpen(false)}
+        title="Edit User Account & Role"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleUpdateUser} className="space-y-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Full Legal Name *</label>
+              <input
+                type="text"
+                required
+                value={editUserForm.fullName}
+                onChange={(e) => setEditUserForm({ ...editUserForm, fullName: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold text-slate-900 bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Username (@handle) *</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-slate-400 font-mono">@</span>
+                <input
+                  type="text"
+                  required
+                  value={editUserForm.username}
+                  onChange={(e) =>
+                    setEditUserForm({
+                      ...editUserForm,
+                      username: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''),
+                    })
+                  }
+                  className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Email Address *</label>
+              <input
+                type="email"
+                required
+                value={editUserForm.email}
+                onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold text-slate-900 bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
+              <input
+                type="tel"
+                value={editUserForm.phone}
+                onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold text-slate-900 bg-white"
+                placeholder="e.g. +254 700 000 000"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Assigned Institutional Role *</label>
+              <select
+                value={editUserForm.role}
+                onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-slate-900 bg-white"
+              >
+                {roles.map((r) => (
+                  <option key={r.id} value={r.code}>
+                    {r.name} ({r.category})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Account Login Status</label>
+              <select
+                value={editUserForm.status}
+                onChange={(e) => setEditUserForm({ ...editUserForm, status: e.target.value as any })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-slate-900 bg-white"
+              >
+                <option value="ACTIVE">ACTIVE (Authorized to log in)</option>
+                <option value="SUSPENDED">SUSPENDED (Access locked)</option>
+                <option value="INACTIVE">INACTIVE</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Current & Change Password Box */}
+          <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-700">Current Login Password:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono font-bold text-blue-900 bg-white px-2.5 py-0.5 rounded border border-slate-200 select-all">
+                  {userToEdit ? getUserPassword(userToEdit) : '—'}
+                </span>
+                {userToEdit && (
+                  <button
+                    type="button"
+                    onClick={() => copyCredentials(userToEdit)}
+                    className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded"
+                    title="Copy credentials"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-bold text-slate-600 uppercase">
+                  Change Password (Leave blank to keep existing)
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditUserForm((prev) => ({
+                      ...prev,
+                      newPassword: `Glcm@${Math.floor(1000 + Math.random() * 9000)}`,
+                      showPassword: true,
+                    }))
+                  }
+                  className="text-[11px] font-bold text-blue-900 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  Generate PIN
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={editUserForm.showPassword ? 'text' : 'password'}
+                  placeholder="Enter new password to overwrite"
+                  value={editUserForm.newPassword || ''}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, newPassword: e.target.value })}
+                  className="w-full pl-3 pr-10 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditUserForm((prev) => ({ ...prev, showPassword: !prev.showPassword }))}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  {editUserForm.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-3 flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsEditUserModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={savingEditUser} icon={<Check className="w-4 h-4" />}>
+              Save User Profile
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ============================================================= */}
+      {/* MODAL 6: DELETE USER ACCOUNT CONFIRMATION                      */}
+      {/* ============================================================= */}
+      <Modal
+        isOpen={isDeleteUserModalOpen}
+        onClose={() => setIsDeleteUserModalOpen(false)}
+        title="Delete User Account"
+        maxWidth="md"
+      >
+        <div className="space-y-4 text-xs">
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="text-rose-950 space-y-1">
+              <span className="font-bold text-sm block">Permanently Delete Account?</span>
+              <p>
+                Are you sure you want to permanently delete the login account for{' '}
+                <strong>{userToDelete?.fullName}</strong> (@{userToDelete?.username || userToDelete?.email?.split('@')[0]})?
+              </p>
+              <p className="text-[11px] text-rose-800">
+                This action revokes portal login access and removes their authentication record from both the cloud database and local device storage.
+              </p>
+            </div>
+          </div>
+
+          {userToDelete && (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-slate-700">
+              <div className="flex justify-between">
+                <span className="font-bold">Role:</span>
+                <span className="font-mono">{userToDelete.role}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-bold">Email:</span>
+                <span>{userToDelete.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-bold">Username:</span>
+                <span className="font-mono">@{userToDelete.username || userToDelete.email?.split('@')[0]}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-slate-100 pt-3 flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsDeleteUserModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              loading={deletingUser}
+              onClick={handleDeleteUser}
+              icon={<Trash2 className="w-4 h-4" />}
+            >
+              Confirm Permanent Delete
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

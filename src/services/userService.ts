@@ -33,6 +33,15 @@ export interface CreateUserData {
 export const SAMPLE_USERS: CreateUserData[] = [];
 
 const LOCAL_USERS_KEY = 'school_erp_created_users';
+const DELETED_USERS_KEY = 'school_erp_deleted_users';
+
+function getDeletedUserIds(): string[] {
+  try {
+    const raw = localStorage.getItem(DELETED_USERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
 
 function getLocalCreatedUsers(): UserProfile[] {
   try {
@@ -47,6 +56,10 @@ function getLocalCreatedUsers(): UserProfile[] {
 
 function saveLocalCreatedUser(user: UserProfile) {
   try {
+    const deleted = new Set(getDeletedUserIds());
+    deleted.delete(user.id);
+    localStorage.setItem(DELETED_USERS_KEY, JSON.stringify(Array.from(deleted)));
+
     const current = getLocalCreatedUsers().filter((u) => u.id !== user.id && u.username?.toLowerCase() !== user.username?.toLowerCase());
     current.unshift(user);
     localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(current));
@@ -57,6 +70,17 @@ function updateLocalCreatedUser(userId: string, updates: Partial<UserProfile>) {
   try {
     const current = getLocalCreatedUsers().map((u) => u.id === userId ? { ...u, ...updates } : u);
     localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(current));
+  } catch {}
+}
+
+function removeLocalCreatedUser(userId: string) {
+  try {
+    const current = getLocalCreatedUsers().filter((u) => u.id !== userId);
+    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(current));
+
+    const deleted = new Set(getDeletedUserIds());
+    deleted.add(userId);
+    localStorage.setItem(DELETED_USERS_KEY, JSON.stringify(Array.from(deleted)));
   } catch {}
 }
 
@@ -78,8 +102,26 @@ export const userService = {
    */
   async getUsers(schoolId: string = DEFAULT_SCHOOL_ID): Promise<UserProfile[]> {
     const localUsers = getLocalCreatedUsers();
+    const enrichPassword = (u: UserProfile) => {
+      if (!u.plainPasswordForAdmin) {
+        u.plainPasswordForAdmin =
+          u.passwordHash ||
+          (u.role === 'SUPER_ADMIN'
+            ? 'Admin@2026'
+            : u.role === 'ACCOUNTANT' || u.role === 'CASHIER'
+            ? 'Bursar@2026'
+            : u.role === 'TEACHER'
+            ? '123456'
+            : u.role === 'PARENT'
+            ? 'Parent@2026'
+            : 'Password@2026');
+      }
+      return u;
+    };
+
+    const deletedIds = new Set(getDeletedUserIds());
     if (!isFirebaseConfigured) {
-      return localUsers;
+      return localUsers.filter((u) => !deletedIds.has(u.id)).map(enrichPassword);
     }
     try {
       const colRef = collection(db, 'users');
@@ -98,7 +140,9 @@ export const userService = {
         }
       });
 
-      const uniqueUsers = Array.from(new Set(mergedMap.values()));
+      const uniqueUsers = Array.from(new Set(mergedMap.values()))
+        .filter((u) => !deletedIds.has(u.id))
+        .map(enrichPassword);
       return uniqueUsers.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
     } catch (err: any) {
       if (isOfflineError(err)) {
@@ -106,7 +150,7 @@ export const userService = {
       } else {
         console.warn('Notice fetching users from Firestore:', err?.message || err);
       }
-      return localUsers;
+      return localUsers.filter((u) => !deletedIds.has(u.id)).map(enrichPassword);
     }
   },
 
@@ -281,7 +325,7 @@ export const userService = {
     if (isFirebaseConfigured) {
       try {
         const docRef = doc(db, 'users', userId);
-        await updateDoc(docRef, cleanForFirestore(updates));
+        await setDoc(docRef, cleanForFirestore(updates), { merge: true });
       } catch (err) {
         console.warn('Notice updating user in firestore:', err);
       }
@@ -301,7 +345,7 @@ export const userService = {
     if (isFirebaseConfigured) {
       try {
         const docRef = doc(db, 'users', userId);
-        await updateDoc(docRef, cleanForFirestore(updates));
+        await setDoc(docRef, cleanForFirestore(updates), { merge: true });
       } catch (err) {
         console.warn('Notice updating user password in firestore:', err);
       }
@@ -309,9 +353,10 @@ export const userService = {
   },
 
   /**
-   * Delete a user profile
+   * Delete a user profile permanently
    */
   async deleteUser(userId: string): Promise<void> {
+    removeLocalCreatedUser(userId);
     if (isFirebaseConfigured) {
       try {
         const docRef = doc(db, 'users', userId);

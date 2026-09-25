@@ -93,6 +93,40 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
   const [slipUser, setSlipUser] = useState<UserProfile | null>(null);
   const [slipPassword, setSlipPassword] = useState<string>('Password@2026');
 
+  // Password Visibility & Quick Credential Copy States
+  const [showAllPasswords, setShowAllPasswords] = useState<boolean>(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+
+  const togglePasswordVisibility = (userId: string) => {
+    setVisiblePasswords((prev) => ({ ...prev, [userId]: !prev[userId] }));
+  };
+
+  const getUserPassword = (u: UserProfile): string => {
+    return (
+      u.plainPasswordForAdmin ||
+      u.passwordHash ||
+      (u.role === 'SUPER_ADMIN'
+        ? 'Admin@2026'
+        : u.role === 'ACCOUNTANT' || u.role === 'CASHIER'
+        ? 'Bursar@2026'
+        : u.role === 'TEACHER'
+        ? '123456'
+        : u.role === 'PARENT'
+        ? 'Parent@2026'
+        : 'Password@2026')
+    );
+  };
+
+  const copyCredentials = (u: UserProfile) => {
+    const pass = getUserPassword(u);
+    const text = `School Portal Credentials:\nUsername: ${u.username || u.email}\nPassword: ${pass}\nRole: ${u.role}\nWebsite: ${window.location.origin}`;
+    navigator.clipboard.writeText(text);
+    setCopiedUserId(u.id);
+    showToast(`Credentials for ${u.fullName} copied to clipboard!`, 'success');
+    setTimeout(() => setCopiedUserId(null), 2500);
+  };
+
   // Add User Form State
   const [addForm, setAddForm] = useState<{
     fullName: string;
@@ -530,6 +564,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
+          <Button
+            size="sm"
+            variant={showAllPasswords ? 'primary' : 'outline'}
+            icon={showAllPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            onClick={() => setShowAllPasswords(!showAllPasswords)}
+            className="text-xs font-bold"
+          >
+            {showAllPasswords ? 'Mask All Passwords' : 'Show All Passwords'}
+          </Button>
+
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
@@ -597,6 +641,23 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
                   <th className="py-3.5 px-4">User Details</th>
                   <th className="py-3.5 px-4">Contact Info</th>
                   <th className="py-3.5 px-4">Assigned Role</th>
+                  <th className="py-3.5 px-4 min-w-[210px] bg-blue-50/60 text-blue-950">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1 font-black">
+                        <KeyRound className="w-3.5 h-3.5 text-blue-900" />
+                        <span>Login Password</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAllPasswords(!showAllPasswords)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-200/70 hover:bg-blue-300 text-[10px] font-black text-blue-950 transition-colors cursor-pointer"
+                        title={showAllPasswords ? "Mask all passwords" : "Show all passwords"}
+                      >
+                        {showAllPasswords ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        <span>{showAllPasswords ? 'Mask' : 'Show All'}</span>
+                      </button>
+                    </div>
+                  </th>
                   <th className="py-3.5 px-4">Account Status</th>
                   <th className="py-3.5 px-4">Created Date</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
@@ -687,6 +748,40 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
                         </div>
                       </td>
 
+                      {/* Login Password Column */}
+                      <td className="py-3.5 px-4 bg-blue-50/20">
+                        {(() => {
+                          const isVisible = showAllPasswords || !!visiblePasswords[u.id];
+                          const pass = getUserPassword(u);
+                          const isCopied = copiedUserId === u.id;
+
+                          return (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <div className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 font-mono text-[11px] font-bold text-slate-900 select-all shadow-2xs">
+                                <KeyRound className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+                                <span>{isVisible ? pass : '••••••••'}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(u.id)}
+                                className="p-1.5 text-slate-600 hover:text-blue-900 hover:bg-white rounded-lg transition-colors cursor-pointer border border-slate-200 bg-slate-50 shadow-2xs"
+                                title={isVisible ? 'Hide password' : 'Show password'}
+                              >
+                                {isVisible ? <EyeOff className="w-3.5 h-3.5 text-slate-500" /> : <Eye className="w-3.5 h-3.5 text-blue-900" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => copyCredentials(u)}
+                                className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer border border-slate-200 bg-slate-50 shadow-2xs"
+                                title="Copy username and password to clipboard"
+                              >
+                                {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
+                              </button>
+                            </div>
+                          );
+                        })()}
+                      </td>
+
                       {/* Status */}
                       <td className="py-3.5 px-4">
                         {u.status === 'ACTIVE' ? (
@@ -764,9 +859,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
                           {/* Edit Details */}
                           <button
                             type="button"
-                            title="Edit User Profile"
+                            title="Edit User Profile & Role"
                             onClick={() => handleOpenEditModal(u)}
-                            className="p-1.5 text-slate-500 hover:text-blue-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-blue-700 hover:text-blue-900 hover:bg-blue-50 border border-blue-200/80 rounded-lg transition-colors cursor-pointer bg-white"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -774,9 +869,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
                           {/* Delete */}
                           <button
                             type="button"
-                            title="Delete User"
+                            title="Delete User Account"
                             onClick={() => handleOpenDeleteModal(u)}
-                            className="p-1.5 text-slate-400 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors cursor-pointer bg-white"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1094,25 +1189,63 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div>
-            <label className="text-[11px] font-bold text-slate-500 uppercase block mb-1">
-              Update Password (Leave blank to keep existing)
-            </label>
-            <div className="relative">
-              <input
-                type={editForm.showPassword ? 'text' : 'password'}
-                placeholder="Enter new password / PIN"
-                value={editForm.newPassword || ''}
-                onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                className="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900"
-              />
-              <button
-                type="button"
-                onClick={() => setEditForm((prev) => ({ ...prev, showPassword: !prev.showPassword }))}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-              >
-                {editForm.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+          {/* Current & New Password Controls */}
+          <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-700">Current Login Password:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono font-bold text-blue-900 bg-white px-2.5 py-0.5 rounded border border-slate-200 select-all">
+                  {selectedUser ? getUserPassword(selectedUser) : '—'}
+                </span>
+                {selectedUser && (
+                  <button
+                    type="button"
+                    onClick={() => copyCredentials(selectedUser)}
+                    className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded"
+                    title="Copy credentials"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-bold text-slate-600 uppercase">
+                  Change Password (Leave blank to keep existing)
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      newPassword: `Glcm@${Math.floor(1000 + Math.random() * 9000)}`,
+                      showPassword: true,
+                    }))
+                  }
+                  className="text-[11px] font-bold text-blue-900 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  Generate PIN
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={editForm.showPassword ? 'text' : 'password'}
+                  placeholder="Enter new password / PIN to overwrite"
+                  value={editForm.newPassword || ''}
+                  onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
+                  className="w-full pl-3 pr-10 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditForm((prev) => ({ ...prev, showPassword: !prev.showPassword }))}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  {editForm.showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1134,12 +1267,33 @@ export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
         title="Change User Password & PIN"
       >
         <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl flex items-start gap-3">
-            <KeyRound className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-950">
-              <span className="font-bold">Set Password for:</span>{' '}
-              <strong>{selectedUser?.fullName}</strong> (@{selectedUser?.username || selectedUser?.email?.split('@')[0]})
+          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <KeyRound className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-950">
+                <span className="font-bold">Account User:</span>{' '}
+                <strong>{selectedUser?.fullName}</strong> (@{selectedUser?.username || selectedUser?.email?.split('@')[0]})
+                {selectedUser && (
+                  <div className="mt-1.5 text-[11px] text-amber-900 flex items-center gap-1.5 font-medium">
+                    <span>Current Password:</span>
+                    <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border border-amber-300 text-amber-950 select-all">
+                      {getUserPassword(selectedUser)}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
+            {selectedUser && (
+              <Button
+                size="sm"
+                variant="outline"
+                icon={<Copy className="w-3.5 h-3.5" />}
+                onClick={() => copyCredentials(selectedUser)}
+                className="text-[11px] shrink-0 bg-white"
+              >
+                Copy
+              </Button>
+            )}
           </div>
 
           <div>

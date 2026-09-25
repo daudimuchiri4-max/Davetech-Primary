@@ -158,7 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   { role: 'SCHOOL_ADMIN' as UserRole, label: 'Admin ERP', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
                   { role: 'TEACHER' as UserRole, label: 'Teacher Portal', icon: <GraduationCap className="w-3.5 h-3.5" /> },
                   { role: 'PARENT' as UserRole, label: 'Parent Portal', icon: <Users className="w-3.5 h-3.5" /> },
-                  { role: 'BURSAR' as UserRole, label: 'Fee Cashier', icon: <DollarSign className="w-3.5 h-3.5" /> },
+                  { role: 'ACCOUNTANT' as UserRole, label: 'Fee Cashier', icon: <DollarSign className="w-3.5 h-3.5" /> },
                 ].map((item) => (
                   <button
                     key={item.role}
