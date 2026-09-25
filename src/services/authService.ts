@@ -165,21 +165,63 @@ export const authService = {
     const cleanPass = (pass || '').trim();
 
     if (!clean) {
-      throw new Error('Please enter your username or email.');
+      throw new Error('Please enter your account username or email.');
+    }
+    if (!cleanPass) {
+      throw new Error('Please enter your account password.');
     }
 
-    // 1. Search in SAMPLE_USERS with flexible matching
+    // 1. Search in Firestore & local synchronized user registry FIRST
+    try {
+      const { userService } = await import('./userService');
+      const matchedUser = await userService.findUserByIdentifier(clean);
+      if (matchedUser) {
+        if (matchedUser.status === 'SUSPENDED') {
+          throw new Error('This account has been suspended. Please contact your school administrator.');
+        }
+
+        const storedPass = (matchedUser.passwordHash || matchedUser.plainPasswordForAdmin || '').trim();
+        if (storedPass && cleanPass) {
+          if (storedPass !== cleanPass) {
+            throw new Error(`Incorrect password for account "${matchedUser.username || matchedUser.email}". Please verify your credentials or contact the administrator to reset it.`);
+          }
+        }
+
+        const updatedProfile: UserProfile = {
+          ...matchedUser,
+          lastLogin: new Date().toISOString(),
+        };
+
+        userService.updateUser(matchedUser.id, {
+          lastLogin: updatedProfile.lastLogin,
+        }).catch(() => {});
+
+        try {
+          localStorage.setItem('school_erp_user', JSON.stringify(updatedProfile));
+        } catch {}
+
+        return updatedProfile;
+      }
+    } catch (e: any) {
+      if (e?.message?.includes('Incorrect password') || e?.message?.includes('suspended')) {
+        throw e;
+      }
+      console.warn('User lookup notice in authService:', e?.message || e);
+    }
+
+    // 2. Search in SAMPLE_USERS for exact demo matching
     const { SAMPLE_USERS } = await import('./userService');
     const sample = SAMPLE_USERS.find(
       (s) =>
         s.email.toLowerCase() === clean ||
-        (s.username && s.username.toLowerCase() === clean) ||
-        s.email.toLowerCase().includes(clean) ||
-        (s.username && s.username.toLowerCase().includes(clean)) ||
-        (s.fullName && s.fullName.toLowerCase().includes(clean))
+        (s.username && s.username.toLowerCase() === clean)
     );
 
     if (sample) {
+      if (sample.password && cleanPass && sample.password !== cleanPass && cleanPass !== 'Password@2026') {
+        throw new Error(`Incorrect password for demo user "${sample.username}".`);
+      }
+
       const simulatedProfile: UserProfile = {
         id: `usr-${sample.username || sample.email.split('@')[0]}`,
         email: sample.email,
@@ -199,80 +241,36 @@ export const authService = {
       try {
         const docRef = doc(db, 'users', simulatedProfile.id);
         setDoc(docRef, cleanForFirestore(simulatedProfile), { merge: true }).catch(() => {});
+        localStorage.setItem('school_erp_user', JSON.stringify(simulatedProfile));
       } catch (e) {}
 
       return simulatedProfile;
     }
 
-    // 2. Search in Firestore for user with matching username, email or phone
-    try {
-      const { userService } = await import('./userService');
-      const matchedUser = await userService.findUserByIdentifier(clean);
-      if (matchedUser) {
-        const storedPass = matchedUser.passwordHash || matchedUser.plainPasswordForAdmin;
-        if (storedPass && cleanPass) {
-          if (storedPass !== cleanPass && cleanPass !== '123456' && cleanPass !== 'Password@2026') {
-            throw new Error('Incorrect password. Please verify your password or contact the administrator to reset it.');
-          }
-        }
-        userService.updateUser(matchedUser.id, {
-          lastLogin: new Date().toISOString(),
-        }).catch(() => {});
-        return matchedUser;
-      }
-    } catch (e: any) {
-      if (e?.message?.includes('Incorrect password')) {
-        throw e;
-      }
-      console.warn('Firestore user lookup notice:', e);
-    }
-
-    // 3. If it's an email format, try standard Firebase Authentication or create profile
+    // 3. If it's an email format, try standard Firebase Authentication
     if (clean.includes('@')) {
       try {
-        const cred = await signInWithEmailAndPassword(auth, clean, cleanPass || 'Password@2026');
+        const cred = await signInWithEmailAndPassword(auth, clean, cleanPass);
         const docRef = doc(db, 'users', cred.user.uid);
         const snap = await getDoc(docRef);
         if (snap.exists()) {
-          return snap.data() as UserProfile;
+          const profile = snap.data() as UserProfile;
+          try {
+            localStorage.setItem('school_erp_user', JSON.stringify(profile));
+          } catch {}
+          return profile;
         }
-      } catch (fbErr) {
-        // Continue to fallback profile creation
+      } catch (fbErr: any) {
+        if (fbErr?.code === 'auth/wrong-password' || fbErr?.code === 'auth/invalid-credential') {
+          throw new Error('Incorrect password. Please verify your credentials or contact the administrator to reset it.');
+        }
       }
     }
 
-    // 4. Universal instant login fallback profile for any staff, teacher, admin, parent or student
-    const fallbackRole: UserRole = 
-      clean.includes('principal') || clean.includes('head') ? 'HEADTEACHER' :
-      clean.includes('deputy') ? 'DEPUTY_HEADTEACHER' :
-      clean.includes('accounts') || clean.includes('finance') ? 'ACCOUNTANT' :
-      clean.includes('reception') ? 'RECEPTIONIST' :
-      clean.includes('nurse') || clean.includes('clinic') ? 'NURSE' :
-      clean.includes('transport') ? 'TRANSPORT_MANAGER' :
-      clean.includes('parent') ? 'PARENT' :
-      clean.includes('student') ? 'STUDENT' :
-      clean.includes('teacher') || clean.includes('mwalimu') ? 'TEACHER' : 'SCHOOL_ADMIN';
-
-    const emergencyProfile: UserProfile = {
-      id: `usr-fallback-${clean.replace(/[^a-z0-9]/g, '')}`,
-      email: clean.includes('@') ? clean : `${clean.replace(/[^a-z0-9]/g, '')}@example-school.ac.ke`,
-      username: clean,
-      fullName: cleanRaw.includes('.') || cleanRaw.includes(' ') ? 
-        cleanRaw.split(/[\.\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 
-        'Staff Member',
-      role: fallbackRole,
-      schoolId: DEFAULT_SCHOOL_ID,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-    };
-
-    try {
-      const docRef = doc(db, 'users', emergencyProfile.id);
-      setDoc(docRef, cleanForFirestore(emergencyProfile), { merge: true }).catch(() => {});
-    } catch (e) {}
-
-    return emergencyProfile;
+    // 4. If account does not exist, provide clear error message
+    throw new Error(
+      `No account found with username or email "${cleanRaw}". Please ensure your school administrator has created this login, or verify your spelling.`
+    );
   },
 
   async logout(): Promise<void> {

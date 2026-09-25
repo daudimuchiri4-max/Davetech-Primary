@@ -32,6 +32,34 @@ export interface CreateUserData {
 
 export const SAMPLE_USERS: CreateUserData[] = [];
 
+const LOCAL_USERS_KEY = 'school_erp_created_users';
+
+function getLocalCreatedUsers(): UserProfile[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_USERS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+function saveLocalCreatedUser(user: UserProfile) {
+  try {
+    const current = getLocalCreatedUsers().filter((u) => u.id !== user.id && u.username?.toLowerCase() !== user.username?.toLowerCase());
+    current.unshift(user);
+    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(current));
+  } catch {}
+}
+
+function updateLocalCreatedUser(userId: string, updates: Partial<UserProfile>) {
+  try {
+    const current = getLocalCreatedUsers().map((u) => u.id === userId ? { ...u, ...updates } : u);
+    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(current));
+  } catch {}
+}
+
 export const userService = {
   /**
    * Format and clean a username string (lowercase, replace spaces and special characters with dots/underscores)
@@ -46,29 +74,39 @@ export const userService = {
   },
 
   /**
-   * Fetch all user profiles from Firestore
+   * Fetch all user profiles from Firestore & local synchronized cache
    */
   async getUsers(schoolId: string = DEFAULT_SCHOOL_ID): Promise<UserProfile[]> {
+    const localUsers = getLocalCreatedUsers();
     if (!isFirebaseConfigured) {
-      return [];
+      return localUsers;
     }
     try {
       const colRef = collection(db, 'users');
       const snap = await getDocs(colRef);
-      if (snap.empty) {
-        return [];
-      }
-      const users = snap.docs.map((d) => ({ ...d.data(), id: d.id } as UserProfile));
+      const firestoreUsers = snap.docs.map((d) => ({ ...d.data(), id: d.id } as UserProfile));
       
-      // Return sorted by creation date or full name
-      return users.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+      // Merge Firestore users and local users without duplicates
+      const mergedMap = new Map<string, UserProfile>();
+      firestoreUsers.forEach((u) => {
+        if (u.id) mergedMap.set(u.id, u);
+        if (u.username) mergedMap.set(`user_${u.username.toLowerCase()}`, u);
+      });
+      localUsers.forEach((u) => {
+        if (u.id && !mergedMap.has(u.id) && !mergedMap.has(`user_${u.username?.toLowerCase()}`)) {
+          mergedMap.set(u.id, u);
+        }
+      });
+
+      const uniqueUsers = Array.from(new Set(mergedMap.values()));
+      return uniqueUsers.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
     } catch (err: any) {
       if (isOfflineError(err)) {
-        console.warn('Firestore offline while fetching users:', err?.message || err);
+        console.warn('Firestore offline while fetching users, using local cache:', err?.message || err);
       } else {
         console.warn('Notice fetching users from Firestore:', err?.message || err);
       }
-      return [];
+      return localUsers;
     }
   },
 
@@ -76,23 +114,21 @@ export const userService = {
    * Get single user by ID
    */
   async getUserById(userId: string): Promise<UserProfile | null> {
+    const local = getLocalCreatedUsers().find((u) => u.id === userId);
     if (!isFirebaseConfigured) {
-      return null;
+      return local || null;
     }
     try {
       const docRef = doc(db, 'users', userId);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        return { ...snap.data(), id: snap.id } as UserProfile;
+        const u = { ...snap.data(), id: snap.id } as UserProfile;
+        saveLocalCreatedUser(u);
+        return u;
       }
-      return null;
+      return local || null;
     } catch (err: any) {
-      if (isOfflineError(err)) {
-        console.warn(`Firestore offline while fetching user ${userId}:`, err?.message || err);
-      } else {
-        console.warn(`Notice fetching user ${userId}:`, err?.message || err);
-      }
-      return null;
+      return local || null;
     }
   },
 
@@ -100,27 +136,79 @@ export const userService = {
    * Find a user profile by username or email or phone
    */
   async findUserByIdentifier(identifier: string): Promise<UserProfile | null> {
+    if (!identifier) return null;
+    const clean = identifier.trim().toLowerCase();
+    const cleanPhone = clean.replace(/[^0-9+]/g, '');
+
+    // 1. Check local synchronized created users first
+    const localMatch = getLocalCreatedUsers().find((u) => {
+      const uEmail = (u.email || '').toLowerCase().trim();
+      const uName = (u.username || '').toLowerCase().trim();
+      const uPhone = (u.phone || '').replace(/[^0-9+]/g, '');
+      const uId = (u.id || '').toLowerCase().trim();
+      return uName === clean || uEmail === clean || uId === clean || (cleanPhone.length >= 7 && uPhone.includes(cleanPhone));
+    });
+
+    if (localMatch && !isFirebaseConfigured) {
+      return localMatch;
+    }
+
     if (!isFirebaseConfigured) {
       return null;
     }
+
     try {
-      const clean = identifier.trim().toLowerCase();
-      const users = await this.getUsers();
-      const match = users.find((u) => {
+      const colRef = collection(db, 'users');
+
+      // 2. Direct Firestore query by exact username
+      try {
+        const userQ = query(colRef, where('username', '==', clean));
+        const userSnap = await getDocs(userQ);
+        if (!userSnap.empty) {
+          const u = { ...userSnap.docs[0].data(), id: userSnap.docs[0].id } as UserProfile;
+          saveLocalCreatedUser(u);
+          return u;
+        }
+      } catch (err) {
+        // Continue to other queries
+      }
+
+      // 3. Direct Firestore query by exact email
+      try {
+        const emailQ = query(colRef, where('email', '==', clean));
+        const emailSnap = await getDocs(emailQ);
+        if (!emailSnap.empty) {
+          const u = { ...emailSnap.docs[0].data(), id: emailSnap.docs[0].id } as UserProfile;
+          saveLocalCreatedUser(u);
+          return u;
+        }
+      } catch (err) {
+        // Continue
+      }
+
+      // 4. Scan all users in Firestore with case-insensitive and phone matching
+      const allUsers = await this.getUsers();
+      const match = allUsers.find((u) => {
         const uEmail = (u.email || '').toLowerCase().trim();
         const uName = (u.username || '').toLowerCase().trim();
         const uPhone = (u.phone || '').replace(/[^0-9+]/g, '');
-        const cleanPhone = clean.replace(/[^0-9+]/g, '');
-        return uEmail === clean || uName === clean || (cleanPhone.length >= 7 && uPhone.includes(cleanPhone));
+        const uId = (u.id || '').toLowerCase().trim();
+        return uName === clean || uEmail === clean || uId === clean || (cleanPhone.length >= 7 && uPhone.includes(cleanPhone));
       });
-      return match || null;
+
+      if (match) {
+        saveLocalCreatedUser(match);
+        return match;
+      }
+
+      return localMatch || null;
     } catch (err: any) {
       if (isOfflineError(err)) {
         console.warn('Firestore offline while finding user by identifier:', err?.message || err);
       } else {
         console.warn('Notice finding user by identifier:', err?.message || err);
       }
-      return null;
+      return localMatch || null;
     }
   },
 
@@ -169,6 +257,9 @@ export const userService = {
       mustChangePassword: false,
     };
 
+    // Save to local registry immediately
+    saveLocalCreatedUser(newUser);
+
     if (isFirebaseConfigured) {
       try {
         await setDoc(newDoc, cleanForFirestore(newUser));
@@ -186,6 +277,7 @@ export const userService = {
     if (updates.username) {
       updates.username = this.cleanUsername(updates.username);
     }
+    updateLocalCreatedUser(userId, updates);
     if (isFirebaseConfigured) {
       try {
         const docRef = doc(db, 'users', userId);
@@ -200,14 +292,16 @@ export const userService = {
    * Set or reset password for a user
    */
   async setUserPassword(userId: string, newPass: string): Promise<void> {
+    const updates = {
+      plainPasswordForAdmin: newPass,
+      passwordHash: newPass,
+      mustChangePassword: false,
+    };
+    updateLocalCreatedUser(userId, updates);
     if (isFirebaseConfigured) {
       try {
         const docRef = doc(db, 'users', userId);
-        await updateDoc(docRef, cleanForFirestore({
-          plainPasswordForAdmin: newPass,
-          passwordHash: newPass,
-          mustChangePassword: false,
-        }));
+        await updateDoc(docRef, cleanForFirestore(updates));
       } catch (err) {
         console.warn('Notice updating user password in firestore:', err);
       }

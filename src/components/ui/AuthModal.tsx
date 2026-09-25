@@ -19,6 +19,9 @@ import {
   Users,
   BookMarked,
   DollarSign,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from 'lucide-react';
 
 interface AuthModalProps {
@@ -37,10 +40,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const { user, loginWithGoogle, login, logout, activeRole, switchRole } = useAuth();
   const { showToast } = useToast();
 
-  const [authMode, setAuthMode] = useState<'GOOGLE' | 'EMAIL'>('GOOGLE');
+  const [authMode, setAuthMode] = useState<'CREDENTIALS' | 'GOOGLE'>('CREDENTIALS');
   const [selectedRole, setSelectedRole] = useState<UserRole>(defaultRole);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -50,10 +54,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       const profile = await loginWithGoogle();
       showToast(`Welcome, ${profile.fullName}! Signed in with Google.`, 'success');
-      if (selectedRole && profile.role !== selectedRole && profile.role !== 'SUPER_ADMIN') {
-        switchRole(selectedRole);
+      if (profile.role) {
+        switchRole(profile.role);
       }
-      onSuccess?.(profile.role || selectedRole);
+      onSuccess?.(profile.role);
       onClose();
     } catch (err: any) {
       if (
@@ -86,38 +90,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      setErrorMessage('Please enter both email and password.');
+      setErrorMessage('Please enter both your account username/email and password.');
       return;
     }
     setLoading(true);
     setErrorMessage(null);
     try {
-      const profile = await login(email.trim(), password);
+      const profile = await login(email.trim(), password.trim());
       showToast(`Welcome back, ${profile.fullName}!`, 'success');
-      if (selectedRole && profile.role !== selectedRole) {
-        switchRole(selectedRole);
+      if (profile.role) {
+        switchRole(profile.role);
       }
-      onSuccess?.(profile.role || selectedRole);
+      onSuccess?.(profile.role);
       onClose();
     } catch (err: any) {
-      if (
-        err?.code === 'auth/api-key-not-valid' ||
-        err?.message?.includes('api-key-not-valid')
-      ) {
-        console.warn('Firebase API key notice in email sign-in:', err?.message || err);
-      } else {
-        console.error('Email sign-in error:', err);
-      }
-      let msg = err.message || 'Invalid credentials. Please verify your email and password.';
-      if (
-        err.code === 'auth/invalid-credential' ||
-        err.code === 'auth/wrong-password' ||
-        err.code === 'auth/user-not-found'
-      ) {
-        msg = email.includes('@gmail.com')
-          ? 'Invalid credentials. Because this is a Gmail address, please switch to the "Google Account (Instant)" tab above and click "Sign in with Google".'
-          : 'Invalid email or password. Please check your credentials, or sign in using your Google account.';
-      }
+      let msg = err.message || 'Invalid username or password. Please verify your credentials.';
       setErrorMessage(msg);
       showToast(msg, 'error');
     } finally {
@@ -243,12 +230,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  setAuthMode('CREDENTIALS');
+                  setErrorMessage(null);
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  authMode === 'CREDENTIALS'
+                    ? 'bg-white text-blue-950 shadow-xs border border-slate-200/80 font-black'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <KeyRound className="w-3.5 h-3.5 text-blue-900" />
+                <span>Username & Password</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
                   setAuthMode('GOOGLE');
                   setErrorMessage(null);
                 }}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   authMode === 'GOOGLE'
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-black'
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
@@ -270,23 +273,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Google Account (Instant)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('EMAIL');
-                  setErrorMessage(null);
-                }}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  authMode === 'EMAIL'
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5 text-slate-500" />
-                <span>Email & Password</span>
+                <span>Google Account</span>
               </button>
             </div>
 
@@ -297,21 +284,108 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <p className="text-xs leading-relaxed font-medium">{errorMessage}</p>
                 </div>
-                {authMode === 'EMAIL' && (
-                  <div className="pt-1 flex items-center gap-2">
+              </div>
+            )}
+
+            {/* Username / Password Login Tab */}
+            {authMode === 'CREDENTIALS' && (
+              <form onSubmit={handleEmailSignIn} className="space-y-3.5 pt-1">
+                <div className="p-3 bg-blue-50/80 border border-blue-200/80 rounded-xl flex items-center gap-2.5 text-blue-950">
+                  <KeyRound className="w-4 h-4 text-blue-700 shrink-0" />
+                  <div className="text-[11px] leading-tight">
+                    <span className="font-bold">Client & Staff Credentials:</span> Enter the exact username and password created by your school administrator.
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Account Username or Email:
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. client1, teacher.omondi, or parent.kamau"
+                      required
+                      className="w-full px-3.5 py-2.5 pl-9 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-900 focus:border-transparent font-medium"
+                    />
+                    <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      Account Password:
+                    </label>
                     <button
                       type="button"
-                      onClick={() => {
-                        setAuthMode('GOOGLE');
-                        setErrorMessage(null);
-                      }}
-                      className="px-2.5 py-1 bg-white border border-rose-300 hover:bg-rose-100/60 text-rose-900 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-[11px] text-blue-900 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                     >
-                      <span>Switch to Google Sign-In &rarr;</span>
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showPassword ? 'Hide Password' : 'Show Password'}</span>
                     </button>
                   </div>
-                )}
-              </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your confidential account password"
+                      required
+                      className="w-full px-3.5 py-2.5 pl-9 pr-10 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-900 focus:border-transparent font-medium"
+                    />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  </div>
+                </div>
+
+                {/* Quick Demo Credentials */}
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Quick Demo Credentials (Click to fill):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { name: 'Admin', user: 'daudi.muchiri', role: 'SUPER_ADMIN' as UserRole },
+                      { name: 'Teacher', user: 'catherine.mutua', role: 'TEACHER' as UserRole },
+                      { name: 'Deputy Head', user: 'deputy.omondi', role: 'DEPUTY_HEADTEACHER' as UserRole },
+                      { name: 'Accounts', user: 'accounts.patrick', role: 'ACCOUNTANT' as UserRole },
+                      { name: 'Reception', user: 'reception.faith', role: 'RECEPTIONIST' as UserRole },
+                    ].map((item) => (
+                      <button
+                        key={item.user}
+                        type="button"
+                        onClick={() => {
+                          setEmail(item.user);
+                          setPassword('Password@2026');
+                          setSelectedRole(item.role);
+                        }}
+                        className="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 text-[10px] font-semibold rounded-lg transition-colors cursor-pointer"
+                      >
+                        {item.name} (@{item.user})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span>Portal and role access are automatically matched to your created account.</span>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  loading={loading}
+                  icon={<LogIn className="w-4 h-4" />}
+                  className="w-full font-bold text-xs bg-blue-900 hover:bg-blue-800"
+                >
+                  Sign In to Account
+                </Button>
+              </form>
             )}
 
             {/* Google Login Tab */}
@@ -378,103 +452,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* Email / Password Login Tab */}
-            {authMode === 'EMAIL' && (
-              <form onSubmit={handleEmailSignIn} className="space-y-3.5 pt-1">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Username or Email Address:
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. mwalimu.omondi or deputy@example-school.ac.ke"
-                      required
-                      className="w-full px-3.5 py-2.5 pl-9 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-900 focus:border-transparent font-medium"
-                    />
-                    <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  </div>
-                  {email.toLowerCase().endsWith('@gmail.com') && (
-                    <p className="mt-1 text-[11px] text-blue-800 bg-blue-50 border border-blue-200/80 rounded-lg p-2 flex items-center justify-between">
-                      <span>💡 For Gmail accounts, use 1-click Google Sign-In:</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAuthMode('GOOGLE');
-                          setErrorMessage(null);
-                        }}
-                        className="font-bold underline ml-1 cursor-pointer text-blue-900"
-                      >
-                        Use Google Login
-                      </button>
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-bold text-slate-700">
-                      Password:
-                    </label>
-                    <span className="text-[10px] text-slate-400">Default: Password@2026</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your assigned password"
-                      required
-                      className="w-full px-3.5 py-2.5 pl-9 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-900 focus:border-transparent font-medium"
-                    />
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  </div>
-                </div>
-
-                {/* Quick Staff Demo Credential Selector */}
-                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Quick Demo Credentials (Click to fill):
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { name: 'Admin', user: 'daudi.muchiri', role: 'SUPER_ADMIN' as UserRole },
-                      { name: 'Teacher', user: 'catherine.mutua', role: 'TEACHER' as UserRole },
-                      { name: 'Deputy Head', user: 'deputy.omondi', role: 'DEPUTY_HEADTEACHER' as UserRole },
-                      { name: 'Accounts', user: 'accounts.patrick', role: 'ACCOUNTANT' as UserRole },
-                      { name: 'Reception', user: 'reception.faith', role: 'RECEPTIONIST' as UserRole },
-                    ].map((item) => (
-                      <button
-                        key={item.user}
-                        type="button"
-                        onClick={() => {
-                          setEmail(item.user);
-                          setPassword('Password@2026');
-                          setSelectedRole(item.role);
-                        }}
-                        className="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 text-[10px] font-semibold rounded-lg transition-colors cursor-pointer"
-                      >
-                        {item.name} (@{item.user})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  loading={loading}
-                  icon={<LogIn className="w-4 h-4" />}
-                  className="w-full font-bold text-xs"
-                >
-                  Sign In to Portal
-                </Button>
-              </form>
             )}
 
             {/* Protected security note */}
