@@ -836,17 +836,33 @@ export const feeService = {
     const oldInvoiceId = currentPayment.invoiceId;
     const newInvoiceId = updates.invoiceId !== undefined ? updates.invoiceId : oldInvoiceId;
 
-    // Recalculate remaining balance
-    let newRemainingBalance = updates.remainingBalance;
-    if (newRemainingBalance === undefined && currentPayment.previousBalance !== undefined) {
-      newRemainingBalance = Math.max(0, currentPayment.previousBalance - newAmount);
+    // Recalculate previous balance and remaining balance
+    const targetStudentId = newStudentId;
+    const student = await studentService.getStudentById(schoolId, targetStudentId);
+
+    let previousBalance = currentPayment.previousBalance;
+    if (previousBalance === undefined || oldStudentId !== newStudentId || updates.previousBalance !== undefined) {
+      if (updates.previousBalance !== undefined) {
+        previousBalance = Number(updates.previousBalance);
+      } else if (oldStudentId === newStudentId && student) {
+        previousBalance = (student.totalBalance || 0) + oldAmount;
+      } else if (student) {
+        previousBalance = student.totalBalance || 0;
+      } else {
+        previousBalance = 0;
+      }
     }
+
+    const remainingBalance = updates.remainingBalance !== undefined
+      ? Number(updates.remainingBalance)
+      : Math.max(0, previousBalance - newAmount);
 
     const updatedPayment: Payment = {
       ...currentPayment,
       ...updates,
       amount: newAmount,
-      ...(newRemainingBalance !== undefined ? { remainingBalance: newRemainingBalance } : {}),
+      previousBalance,
+      remainingBalance,
     };
 
     await setDoc(docRef, cleanForFirestore(updatedPayment), { merge: true });

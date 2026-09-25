@@ -472,50 +472,26 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
 
           </nav>
 
-          {/* Action Buttons: Staff Login & Google / Portal Login */}
+          {/* Action Buttons: Direct Portal Entry (No Login Required) */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => setIsStaffLoginModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-blue-950 text-xs font-black shadow-xs transition-all cursor-pointer border border-amber-300"
-              title="Staff & Employee Portal Login (Username & Password)"
+              onClick={() => onEnterPortal('TEACHER')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-blue-800 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer border border-blue-700"
+              title="Enter Teacher Portal directly without login"
             >
-              <Briefcase className="w-3.5 h-3.5 text-blue-950" />
-              <span>Staff Login</span>
+              <Briefcase className="w-3.5 h-3.5 text-amber-300" />
+              <span>Teacher Portal</span>
             </button>
 
             <button
               type="button"
-              onClick={() => {
-                setAuthModalRole('SCHOOL_ADMIN');
-                setIsAuthModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-white bg-white hover:bg-blue-50 text-blue-950 text-xs font-bold shadow-xs transition-all cursor-pointer"
-              title="Sign in with your registered Google Account or credentials"
+              onClick={() => onEnterPortal('SCHOOL_ADMIN')}
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition-all cursor-pointer"
+              title="Enter School ERP & Admin Dashboard directly without login"
             >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                />
-              </svg>
-              <span className="truncate max-w-[100px] sm:max-w-none">
-                {user && user.email && user.id !== 'demo-admin-id'
-                  ? user.fullName || user.email
-                  : 'Portal Sign-In'}
-              </span>
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Enter School Portal</span>
             </button>
           </div>
         </div>
