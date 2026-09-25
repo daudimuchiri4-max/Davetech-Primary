@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { UserRole } from '../../types';
@@ -15,6 +15,9 @@ import {
   ChevronDown,
   Menu,
   Printer,
+  Download,
+  Smartphone,
+  X,
 } from 'lucide-react';
 
 interface TopNavbarProps {
@@ -33,6 +36,30 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   const { showToast } = useToast();
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [printerModalOpen, setPrinterModalOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        showToast('App installed successfully!', 'success');
+      }
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
 
   const printerConfig = printerService.getConfig();
 
@@ -107,6 +134,16 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           />
         </button>
 
+        {/* Install App PWA Button */}
+        <button
+          onClick={handleInstallApp}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 border border-emerald-500 rounded-xl transition-colors cursor-pointer shadow-xs"
+          title="Install App on Phone / Desktop"
+        >
+          <Download className="w-3.5 h-3.5 text-emerald-100" />
+          <span className="hidden md:inline">Install App</span>
+        </button>
+
         {/* Public Website View Link */}
         <button
           onClick={onNavigatePublic}
@@ -174,6 +211,56 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         isOpen={printerModalOpen}
         onClose={() => setPrinterModalOpen(false)}
       />
+
+      {/* PWA Install Guide Modal */}
+      {showInstallGuide && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white text-slate-900 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-2xl">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">Install App on Phone</h3>
+                  <p className="text-xs text-slate-500">Access your school ERP instantly from your home screen</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-700">
+              <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-1">
+                <span className="font-bold text-blue-900 block text-sm">📱 For Android (Chrome / Edge):</span>
+                <p className="leading-relaxed text-slate-600">
+                  Tap the browser menu icon (<strong className="text-slate-900">⋮</strong>) at the top right, then select <strong className="text-blue-900">"Install app"</strong> or <strong className="text-blue-900">"Add to Home screen"</strong>.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <span className="font-bold text-slate-900 block text-sm">🍏 For iPhone / iPad (Safari):</span>
+                <p className="leading-relaxed text-slate-600">
+                  Tap the Share button (<strong className="text-slate-900">⎋</strong> or <strong className="text-slate-900">📤</strong>) at the bottom toolbar, scroll down, and tap <strong className="text-slate-900">"Add to Home Screen"</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="w-full py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-2xl text-xs cursor-pointer shadow-md transition-colors"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

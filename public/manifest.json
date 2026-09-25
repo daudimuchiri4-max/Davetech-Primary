@@ -1,15 +1,19 @@
 {
-  "name": "Primary School ERP",
-  "short_name": "Primary School ERP",
+  "id": "/",
+  "name": "Primary School ERP & Management System",
+  "short_name": "SchoolERP",
+  "description": "Comprehensive Single-School ERP & Academic Management System from Playgroup to Grade 9",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1e3a8a",
   "icons": [
     {
       "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
