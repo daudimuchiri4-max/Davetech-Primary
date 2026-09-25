@@ -472,26 +472,50 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
 
           </nav>
 
-          {/* Action Buttons: Direct Portal Entry (No Login Required) */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Action Buttons: Teacher Portal & School Portal */}
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => onEnterPortal('TEACHER')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-blue-800 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer border border-blue-700"
-              title="Enter Teacher Portal directly without login"
+              onClick={() => setIsStaffLoginModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-blue-950 text-xs font-black shadow-xs transition-all cursor-pointer border border-amber-300"
+              title="Teacher Portal Login (Username & Password)"
             >
-              <Briefcase className="w-3.5 h-3.5 text-amber-300" />
+              <Briefcase className="w-3.5 h-3.5 text-blue-950" />
               <span>Teacher Portal</span>
             </button>
 
             <button
               type="button"
-              onClick={() => onEnterPortal('SCHOOL_ADMIN')}
-              className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition-all cursor-pointer"
-              title="Enter School ERP & Admin Dashboard directly without login"
+              onClick={() => {
+                setAuthModalRole('SCHOOL_ADMIN');
+                setIsAuthModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-2 rounded-xl border border-white bg-white hover:bg-blue-50 text-blue-950 text-xs font-bold shadow-xs transition-all cursor-pointer"
+              title="Sign in with your registered Google Account or credentials"
             >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Enter School Portal</span>
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+              <span className="truncate max-w-[100px] sm:max-w-none">
+                {user && user.email && user.id !== 'demo-admin-id'
+                  ? user.fullName || user.email
+                  : 'School Portal'}
+              </span>
             </button>
           </div>
         </div>
@@ -501,7 +525,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
       <section
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
-        className="relative bg-slate-900 text-white py-20 lg:py-32 overflow-hidden min-h-[560px] flex items-center"
+        className="relative bg-blue-950 text-white overflow-hidden min-h-[600px] lg:h-[620px] flex items-center"
       >
         {activeSlides.map((slide, index) => (
           <div
@@ -509,12 +533,12 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
             className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out ${
               index === currentSlideIndex ? 'opacity-100 z-0' : 'opacity-0 z-0 pointer-events-none'
             }`}
-            style={{ backgroundImage: `url(${slide.imageUrl})` }}
+            style={{ backgroundImage: `url(${slide.imageUrl || 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1600&q=80'})` }}
           />
         ))}
 
-        {/* Subtle Bottom Scrim for Maximum Photo Visibility and High Contrast Typography */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none" />
+        {/* Professional Dark Blue / Black Transparent Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-blue-950/75 to-blue-900/60 pointer-events-none z-10" />
 
         {activeSlides.length > 1 && (
           <>
@@ -535,8 +559,8 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
           </>
         )}
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 w-full z-10">
-          {/* Clean Floating Container (No Obstructive Dark Box) */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 w-full z-20">
+          {/* Clean Floating Container */}
           <div
             className={`max-w-3xl space-y-5 ${
               titleTypo.textAlign === 'center'
@@ -567,7 +591,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
                 textShadow: '0 2px 14px rgba(0,0,0,0.85), 0 1px 3px rgba(0,0,0,0.9)',
               }}
             >
-              {currentSlide?.title || 'Inspiring Young Minds, Building Future Leaders'}
+              Building Bright Futures from Playgroup to Grade 9
             </h2>
 
             <p
@@ -583,8 +607,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
                 textShadow: '0 1px 8px rgba(0,0,0,0.85)',
               }}
             >
-              {currentSlide?.subtitle ||
-                'A Premier Kenyan Primary & Junior School from Playgroup to Grade 9, excelling in CBC Competency Curriculum, Holistic Talent, Coding & Character.'}
+              A nurturing, values-driven learning environment where every child is empowered to learn, grow and succeed.
             </p>
 
             <div
@@ -599,30 +622,20 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
               <Button
                 variant="primary"
                 size="lg"
-                onClick={() => {
-                  if (currentSlide?.buttonLink === 'facilities') {
-                    document.getElementById('facilities')?.scrollIntoView({ behavior: 'smooth' });
-                  } else if (currentSlide?.buttonLink === 'fees') {
-                    document.getElementById('fees')?.scrollIntoView({ behavior: 'smooth' });
-                  } else if (currentSlide?.buttonLink === 'about') {
-                    document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
-                  } else {
-                    setIsAdmissionModalOpen(true);
-                  }
-                }}
+                onClick={() => setIsAdmissionModalOpen(true)}
                 icon={<ArrowRight className="w-4 h-4" />}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xl cursor-pointer"
               >
-                {currentSlide?.buttonText || 'Enroll Your Child (2026 Intake)'}
+                Apply for Admission
               </Button>
               <button
                 type="button"
                 onClick={() => {
-                  document.getElementById('fees')?.scrollIntoView({ behavior: 'smooth' });
+                  document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="px-5 py-3 rounded-xl bg-slate-900/60 hover:bg-slate-900/85 text-white font-bold text-sm border border-white/30 transition-colors inline-flex items-center gap-2 backdrop-blur-xs shadow-xl cursor-pointer"
+                className="px-6 py-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-900/85 text-white font-bold text-sm border border-white/30 transition-colors inline-flex items-center gap-2 backdrop-blur-xs shadow-xl cursor-pointer"
               >
-                <DollarSign className="w-4 h-4 text-amber-400" /> View 2026 Fee Structure
+                Explore Our School
               </button>
             </div>
 
@@ -652,6 +665,78 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
         </div>
       </section>
 
+      {/* Quick Access Section */}
+      <section className="bg-blue-900 text-white py-6 border-b border-blue-800 shadow-lg relative z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <button
+              onClick={() => setIsAdmissionModalOpen(true)}
+              className="p-4 rounded-2xl bg-blue-950/80 hover:bg-blue-950 border border-blue-800/80 flex items-center gap-3 transition-all cursor-pointer group shadow-sm hover:scale-[1.02]"
+            >
+              <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <span className="font-bold text-xs block text-white">Admissions</span>
+                <span className="text-[10px] text-blue-200">2026 Intake Open</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => document.getElementById('fees')?.scrollIntoView({ behavior: 'smooth' })}
+              className="p-4 rounded-2xl bg-blue-950/80 hover:bg-blue-950 border border-blue-800/80 flex items-center gap-3 transition-all cursor-pointer group shadow-sm hover:scale-[1.02]"
+            >
+              <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl group-hover:scale-110 transition-transform">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <span className="font-bold text-xs block text-white">Fee Structure</span>
+                <span className="text-[10px] text-blue-200">Termly Schedules</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => document.getElementById('academics-progression')?.scrollIntoView({ behavior: 'smooth' })}
+              className="p-4 rounded-2xl bg-blue-950/80 hover:bg-blue-950 border border-blue-800/80 flex items-center gap-3 transition-all cursor-pointer group shadow-sm hover:scale-[1.02]"
+            >
+              <div className="p-2.5 bg-blue-500/20 text-blue-300 rounded-xl group-hover:scale-110 transition-transform">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <span className="font-bold text-xs block text-white">School Calendar</span>
+                <span className="text-[10px] text-blue-200">Progression & Terms</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
+              className="p-4 rounded-2xl bg-blue-950/80 hover:bg-blue-950 border border-blue-800/80 flex items-center gap-3 transition-all cursor-pointer group shadow-sm hover:scale-[1.02]"
+            >
+              <div className="p-2.5 bg-purple-500/20 text-purple-300 rounded-xl group-hover:scale-110 transition-transform">
+                <Users className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <span className="font-bold text-xs block text-white">Parent Info</span>
+                <span className="text-[10px] text-blue-200">Values & Guidelines</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+              className="p-4 rounded-2xl bg-blue-950/80 hover:bg-blue-950 border border-blue-800/80 flex items-center gap-3 transition-all cursor-pointer group shadow-sm hover:scale-[1.02] col-span-2 sm:col-span-1"
+            >
+              <div className="p-2.5 bg-rose-500/20 text-rose-300 rounded-xl group-hover:scale-110 transition-transform">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <span className="font-bold text-xs block text-white">Contact Us</span>
+                <span className="text-[10px] text-blue-200">Visit Campus</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Highlights / Stats */}
       <section className="py-12 bg-slate-50 border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -675,17 +760,280 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
                 {content?.stats?.teachersCount || 42}+
               </div>
               <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">
-                TSC Teachers
+                Teachers
               </div>
             </div>
             <div className="p-4">
               <div className="text-3xl font-black text-blue-900 font-mono">
-                {content?.stats?.yearsOfExcellence || 18} Yrs
+                {content?.stats?.yearsOfExcellence || 18} Years
               </div>
               <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">
                 Academic Heritage
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Welcome Section */}
+      <section id="about" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 text-blue-900 text-xs font-bold border border-blue-200">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Welcome to {school?.name || 'Davetech Primary School'}
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              Shaping Tomorrow&apos;s Leaders with Values, Knowledge & Character
+            </h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {content?.aboutIntro || 'At Davetech Primary School, we provide a holistic, competency-based education framework from Playgroup all the way to Junior School (Grade 9). Our dedicated educators cultivate critical thinking, creativity, moral integrity, and technological prowess in every learner.'}
+            </p>
+            <div className="grid grid-cols-2 gap-4 pt-2 text-xs font-bold text-slate-800">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> CBC Compliant Curriculum
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Qualified TSC Teachers
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Modern Computer & Science Labs
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Nutritious Hot Meals Program
+              </div>
+            </div>
+            <div className="pt-4 flex items-center gap-4">
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => setIsAdmissionModalOpen(true)}
+                className="bg-blue-900 hover:bg-blue-800 font-bold"
+              >
+                Apply for Admission
+              </Button>
+              <button
+                type="button"
+                onClick={() => document.getElementById('facilities')?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-xs font-bold text-blue-900 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                Explore Campus Facilities <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-100">
+              <img
+                src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80"
+                alt="School Campus"
+                className="w-full h-[420px] object-cover hover:scale-105 transition-transform duration-500"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="absolute -bottom-6 -left-6 bg-blue-900 text-white p-6 rounded-3xl shadow-xl hidden sm:block border-2 border-blue-800">
+              <div className="text-3xl font-black font-mono">18+</div>
+              <div className="text-xs font-semibold text-blue-200 mt-0.5">Years of Unmatched Excellence</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us Cards */}
+      <section className="py-16 bg-slate-50 border-t border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <Badge variant="primary" size="md">WHY CHOOSE US</Badge>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              The Davetech Advantage for Your Child
+            </h3>
+            <p className="text-xs text-slate-500">
+              Four pillars of excellence that set our institution apart in nurturing well-rounded global citizens.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Academic Excellence</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Consistent top performance in national CBC assessments and junior secondary placement examinations through rigorous personalized instruction.
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                <Award className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Sports & Co-Curricular</h4>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              State-of-the-art swimming pool, football pitch, indoor athletics, music festivals, scouting, and competitive debate clubs.
+            </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Character & Values</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                A disciplined, values-driven environment anchored in respect, integrity, empathy, and spiritual growth for every learner.
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
+                <Compass className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Technology & Innovation</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Dedicated computer laboratory equipped with modern coding programs, robotics kits, and digital literacy tools from early years.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Academics Progression (Playgroup to Grade 9) */}
+      <section id="academics-progression" className="py-16 bg-white border-t border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <Badge variant="primary" size="md">CBC CURRICULUM PATHWAY</Badge>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Seamless Academic Progression: Playgroup to Grade 9
+            </h3>
+            <p className="text-xs text-slate-500">
+              Following the Kenyan Competency-Based Curriculum (CBC) 2-6-3-3 educational structure.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {[
+              { grade: 'Playgroup', desc: 'Ages 2-3 • Early Socialization' },
+              { grade: 'PP1', desc: 'Pre-Primary 1 • Phonics & Motor' },
+              { grade: 'PP2', desc: 'Pre-Primary 2 • Numeracy Foundation' },
+              { grade: 'Grade 1', desc: 'Lower Primary • Core Literacy' },
+              { grade: 'Grade 2', desc: 'Lower Primary • Applied Skills' },
+              { grade: 'Grade 3', desc: 'Lower Primary • MLP Assessment' },
+              { grade: 'Grade 4', desc: 'Upper Primary • Science & Agric' },
+              { grade: 'Grade 5', desc: 'Upper Primary • Digital Literacy' },
+              { grade: 'Grade 6', desc: 'Upper Primary • KPSEA Prep' },
+              { grade: 'Grade 7', desc: 'Junior Secondary • STEM Labs' },
+              { grade: 'Grade 8', desc: 'Junior Secondary • Advanced STEM' },
+              { grade: 'Grade 9', desc: 'Junior Secondary • KJSEA Prep' },
+            ].map((lvl, idx) => (
+              <div
+                key={idx}
+                onClick={() => {
+                  setAppForm((prev) => ({ ...prev, desiredClass: lvl.grade as any }));
+                  setIsAdmissionModalOpen(true);
+                }}
+                className="bg-slate-50 hover:bg-blue-900 hover:text-white p-4 rounded-2xl border border-slate-200 transition-all cursor-pointer group text-center space-y-1.5 shadow-2xs"
+              >
+                <div className="font-black text-sm text-blue-950 group-hover:text-white">{lvl.grade}</div>
+                <div className="text-[10px] text-slate-500 group-hover:text-blue-200 leading-snug">{lvl.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* School Life Section */}
+      <section className="py-16 bg-slate-50 border-t border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <Badge variant="primary" size="md">VIBRANT SCHOOL LIFE</Badge>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Beyond the Classroom: Talent, Sports & Arts
+            </h3>
+            <p className="text-xs text-slate-500">
+              Every learner discovers and hones their unique talents through structured co-curricular engagements.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="rounded-3xl overflow-hidden border border-slate-200 bg-white shadow-xs group">
+              <div className="h-48 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=800&q=80"
+                  alt="Sports & Athletics"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="p-6 space-y-2">
+                <h4 className="font-bold text-base text-slate-900">Sports & Athletics</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Inter-school football, swimming galas, basketball tournaments, and athletic championships promoting physical fitness and teamwork.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl overflow-hidden border border-slate-200 bg-white shadow-xs group">
+              <div className="h-48 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80"
+                  alt="Music & Drama"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="p-6 space-y-2">
+                <h4 className="font-bold text-base text-slate-900">Music & Drama Festivals</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Vocal training, traditional folk dances, instrumental recitals, and theatrical drama performances at county and national levels.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl overflow-hidden border border-slate-200 bg-white shadow-xs group">
+              <div className="h-48 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=800&q=80"
+                  alt="STEM & Coding Clubs"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="p-6 space-y-2">
+                <h4 className="font-bold text-base text-slate-900">STEM, Robotics & Coding Clubs</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Junior innovators build automated robotics, simple mobile apps, and interactive coding projects in our dedicated tech lab.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Admissions Banner */}
+      <section className="py-16 bg-blue-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
+          <div className="space-y-3 max-w-2xl">
+            <Badge variant="primary" size="md">2026 INTAKE IS ACTIVE</Badge>
+            <h3 className="text-3xl font-black tracking-tight text-white">
+              Admissions for 2026 Are Open
+            </h3>
+            <p className="text-sm text-blue-100 leading-relaxed">
+              Give your child a strong foundation for a successful future. Secure their placement in Playgroup through Grade 9 today.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 justify-center shrink-0">
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => setIsAdmissionModalOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-xl"
+            >
+              Apply Now
+            </Button>
+            <button
+              type="button"
+              onClick={() => document.getElementById('fees')?.scrollIntoView({ behavior: 'smooth' })}
+              className="px-6 py-3.5 rounded-xl bg-blue-950 hover:bg-blue-950/80 text-white font-bold text-sm border border-blue-800 transition-colors shadow-xl cursor-pointer"
+            >
+              View Fee Structure
+            </button>
           </div>
         </div>
       </section>
@@ -1146,6 +1494,56 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({ onEnterPortal, onO
               </div>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-20 bg-slate-50 border-t border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <Badge variant="primary" size="md">GET IN TOUCH</Badge>
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Visit or Contact Our Admissions Office
+            </h3>
+            <p className="text-xs text-slate-500">
+              We welcome inquiries and campus visits throughout the school term.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-900 flex items-center justify-center font-bold">
+                <Phone className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Phone & WhatsApp</h4>
+              <p className="text-xs text-slate-600 font-mono font-bold">
+                {content.contactPhone || school?.phone || '+254 712 345 678'}
+              </p>
+              <p className="text-[11px] text-slate-500">Available Monday to Friday, 8:00 AM - 5:00 PM</p>
+            </div>
+
+            <div className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                <Mail className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Email Address</h4>
+              <p className="text-xs text-slate-600 font-mono font-bold">
+                {content.contactEmail || school?.email || 'admissions@davetechprimary.ac.ke'}
+              </p>
+              <p className="text-[11px] text-slate-500">We respond to all admissions emails within 24 hours.</p>
+            </div>
+
+            <div className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+                <MapPin className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Campus Location & Hours</h4>
+              <p className="text-xs text-slate-600">
+                {content.locationAddress || school?.address || 'Mariru Park, Kenya'}
+              </p>
+              <p className="text-[11px] text-slate-500">Office Hours: Mon - Fri: 8:00 AM - 5:00 PM, Sat: 9:00 AM - 1:00 PM</p>
+            </div>
+          </div>
         </div>
       </section>
 
