@@ -64,12 +64,32 @@
         "amount": { "type": "number" }
       },
       "required": ["id", "schoolId", "studentId", "receiptNumber", "amount"]
+    },
+    "RoleDefinition": {
+      "title": "RoleDefinition",
+      "description": "RBAC role permissions matrix entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "isSystem": { "type": "boolean" },
+        "permissions": { "type": "array" }
+      },
+      "required": ["id", "name", "code", "permissions"]
     }
   },
   "firestore": {
     "/schools/{schoolId}": {
       "schema": "School",
       "description": "Schools root collection"
+    },
+    "/schools/{schoolId}/roles/{roleId}": {
+      "schema": "RoleDefinition",
+      "description": "Custom and system roles with granular permission grants"
     },
     "/users/{userId}": {
       "schema": "UserProfile",

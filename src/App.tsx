@@ -365,9 +365,9 @@ const MainAppContent: React.FC = () => {
       case 'WEBSITE_CMS':
         return <WebsiteCMSView onOpenPublicSite={() => handleNavigate('PUBLIC')} />;
       case 'ROLES_PERMISSIONS':
-        return <RolesPermissionsView />;
+        return <RolesPermissionsView onNavigate={handleNavigate} />;
       case 'USERS':
-        return <UsersView />;
+        return <UsersView onNavigate={handleNavigate} />;
       case 'REPORTS':
         return <ReportsView />;
       case 'SETTINGS':

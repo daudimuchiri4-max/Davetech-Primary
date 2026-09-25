@@ -437,17 +437,63 @@ export const rolePermissionService = {
   ): Promise<void> {
     try {
       const docRef = doc(db, 'schools', schoolId, 'roles', roleId);
-      await setDoc(
-        docRef,
-        cleanForFirestore({
-          ...updates,
-          updatedAt: new Date().toISOString(),
-        }),
-        { merge: true }
-      );
+      const defaultRole = DEFAULT_ROLES.find((r) => r.id === roleId || r.code === updates.code);
+      const payload = {
+        ...(defaultRole || {}),
+        ...updates,
+        id: roleId,
+        schoolId,
+        updatedAt: new Date().toISOString(),
+      };
+      await setDoc(docRef, cleanForFirestore(payload), { merge: true });
     } catch (err) {
       console.warn('Role update notice:', err);
     }
+  },
+
+  async toggleRolePermission(
+    schoolId: string,
+    role: RoleDefinition,
+    permissionKey: PermissionKey
+  ): Promise<RoleDefinition> {
+    if (role.code === 'SUPER_ADMIN') {
+      return role;
+    }
+    const has = role.permissions.includes(permissionKey);
+    const updatedPerms = has
+      ? role.permissions.filter((k) => k !== permissionKey)
+      : [...role.permissions, permissionKey];
+
+    const updatedRole: RoleDefinition = {
+      ...role,
+      permissions: updatedPerms,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.updateRole(schoolId, role.id, updatedRole);
+    return updatedRole;
+  },
+
+  async toggleModuleForRole(
+    schoolId: string,
+    role: RoleDefinition,
+    moduleName: string,
+    grantAll: boolean
+  ): Promise<RoleDefinition> {
+    if (role.code === 'SUPER_ADMIN') return role;
+    const modulePerms = ALL_PERMISSIONS.filter((p) => p.module === moduleName).map((p) => p.key);
+    let updatedPerms: PermissionKey[];
+    if (grantAll) {
+      updatedPerms = Array.from(new Set([...role.permissions, ...modulePerms]));
+    } else {
+      updatedPerms = role.permissions.filter((k) => !modulePerms.includes(k));
+    }
+    const updatedRole: RoleDefinition = {
+      ...role,
+      permissions: updatedPerms,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.updateRole(schoolId, role.id, updatedRole);
+    return updatedRole;
   },
 
   async deleteRole(schoolId: string, roleId: string): Promise<void> {

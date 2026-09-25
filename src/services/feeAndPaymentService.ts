@@ -6,6 +6,9 @@ import {
   setDoc,
   deleteDoc,
   writeBatch,
+  query,
+  where,
+  limit,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../lib/firebase';
 import { FeeStructure, Invoice, Payment, Student, GradeLevel } from '../types';
@@ -202,6 +205,9 @@ export const DEFAULT_CBC_FEE_STRUCTURES: Omit<FeeStructure, 'schoolId' | 'create
     totalAmount: 79500,
   },
 ];
+
+// Mutex lock to prevent concurrent double charging / rapid clicks for the same student
+const inFlightPayments = new Set<string>();
 
 export const feeService = {
   async getFeeStructures(schoolId: string): Promise<FeeStructure[]> {
@@ -750,68 +756,129 @@ export const feeService = {
     schoolId: string,
     paymentData: Omit<Payment, 'id' | 'schoolId' | 'receiptNumber' | 'createdAt'>
   ): Promise<Payment> {
-    const colRef = collection(db, 'schools', schoolId, 'payments');
-    const newDoc = doc(colRef);
-    const receiptNum = `REC/${new Date().getFullYear()}/${Math.floor(10000 + Math.random() * 90000)}`;
-    const now = new Date().toISOString();
     const amountNum = Number(paymentData.amount) || 0;
+    if (amountNum <= 0) {
+      throw new Error('Payment amount must be greater than zero.');
+    }
 
-    // Fetch student's current information and balance before payment
-    const currentStudent = await studentService.getStudentById(schoolId, paymentData.studentId);
-    
-    // Determine previous balance: if passed in paymentData use it, otherwise use student's current balance
-    const previousBalance = paymentData.previousBalance !== undefined 
-      ? Number(paymentData.previousBalance) 
-      : (currentStudent?.totalBalance !== undefined ? currentStudent.totalBalance : 0);
-    
-    // Determine remaining balance after deducting this payment
-    const remainingBalance = paymentData.remainingBalance !== undefined
-      ? Number(paymentData.remainingBalance)
-      : Math.max(0, previousBalance - amountNum);
+    if (!paymentData.studentId) {
+      throw new Error('Please select a student for payment recording.');
+    }
 
-    const payment: Payment = {
-      ...paymentData,
-      id: newDoc.id,
-      schoolId,
-      receiptNumber: receiptNum,
-      amount: amountNum,
-      previousBalance,
-      remainingBalance,
-      classLevel: paymentData.classLevel || currentStudent?.currentClass,
-      stream: paymentData.stream || currentStudent?.stream,
-      createdAt: now,
-    };
+    const studentLockKey = `${schoolId}:${paymentData.studentId}`;
+    if (inFlightPayments.has(studentLockKey)) {
+      throw new Error('A payment transaction is currently processing for this student. Please wait a moment.');
+    }
 
-    await setDoc(newDoc, cleanForFirestore(payment));
+    inFlightPayments.add(studentLockKey);
 
-    // If linked to invoice, reconcile invoice
-    if (paymentData.invoiceId) {
-      const invRef = doc(db, 'schools', schoolId, 'invoices', paymentData.invoiceId);
-      const invSnap = await getDoc(invRef);
-      if (invSnap.exists()) {
-        const inv = invSnap.data() as Invoice;
-        const newPaid = (inv.paidAmount || 0) + payment.amount;
-        const newBalance = Math.max(0, (inv.totalAmount || 0) - newPaid);
-        const newStatus = newBalance === 0 ? 'PAID' : newPaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID';
-        await setDoc(
-          invRef,
-          cleanForFirestore({
-            paidAmount: newPaid,
-            balance: newBalance,
-            status: newStatus,
-          }),
-          { merge: true }
-        );
+    try {
+      const colRef = collection(db, 'schools', schoolId, 'payments');
+
+      // 1. Double charging check via transaction reference (e.g. M-Pesa code, Bank Slip, Cheque)
+      const refCode = paymentData.transactionReference?.trim();
+      if (refCode && !refCode.startsWith('MPESA-DUMMY')) {
+        try {
+          const refQuery = query(colRef, where('transactionReference', '==', refCode), limit(1));
+          const refSnap = await getDocs(refQuery);
+          if (!refSnap.empty) {
+            const existing = refSnap.docs[0].data() as Payment;
+            throw new Error(
+              `Double payment prevented: Transaction reference "${refCode}" has already been recorded under Receipt #${existing.receiptNumber || refSnap.docs[0].id} for ${existing.studentName || 'a student'}.`
+            );
+          }
+        } catch (err: any) {
+          if (err.message && err.message.startsWith('Double payment prevented')) {
+            throw err;
+          }
+        }
       }
-    }
 
-    // Update student's overall outstanding balance
-    if (currentStudent) {
-      const updatedBalance = Math.max(0, (currentStudent.totalBalance || 0) - payment.amount);
-      await studentService.updateStudent(schoolId, paymentData.studentId, { totalBalance: updatedBalance });
-    }
+      // 2. Rapid duplicate charge guard: identical student & amount within last 30 seconds
+      try {
+        const recentQuery = query(colRef, where('studentId', '==', paymentData.studentId), limit(8));
+        const recentSnap = await getDocs(recentQuery);
+        const thirtySecsAgo = Date.now() - 30 * 1000;
+        for (const docSnap of recentSnap.docs) {
+          const p = docSnap.data() as Payment;
+          if (Number(p.amount) === amountNum && p.createdAt) {
+            const t = new Date(p.createdAt).getTime();
+            if (!isNaN(t) && t > thirtySecsAgo) {
+              throw new Error(
+                `Double charge prevented: An identical payment of ${amountNum.toLocaleString()} for this student was just recorded seconds ago (Receipt #${p.receiptNumber}). To prevent double charging, please verify existing receipts before proceeding.`
+              );
+            }
+          }
+        }
+      } catch (err: any) {
+        if (err.message && err.message.startsWith('Double charge prevented')) {
+          throw err;
+        }
+      }
 
-    return payment;
+      const newDoc = doc(colRef);
+      const receiptNum = `REC/${new Date().getFullYear()}/${Math.floor(10000 + Math.random() * 90000)}`;
+      const now = new Date().toISOString();
+
+      // Fetch student's current information and balance before payment
+      const currentStudent = await studentService.getStudentById(schoolId, paymentData.studentId);
+      
+      // Determine previous balance: if passed in paymentData use it, otherwise use student's current balance
+      const previousBalance = paymentData.previousBalance !== undefined 
+        ? Number(paymentData.previousBalance) 
+        : (currentStudent?.totalBalance !== undefined ? currentStudent.totalBalance : 0);
+      
+      // Determine remaining balance after deducting this payment
+      const remainingBalance = paymentData.remainingBalance !== undefined
+        ? Number(paymentData.remainingBalance)
+        : Math.max(0, previousBalance - amountNum);
+
+      const payment: Payment = {
+        ...paymentData,
+        id: newDoc.id,
+        schoolId,
+        receiptNumber: receiptNum,
+        amount: amountNum,
+        previousBalance,
+        remainingBalance,
+        classLevel: paymentData.classLevel || currentStudent?.currentClass,
+        stream: paymentData.stream || currentStudent?.stream,
+        createdAt: now,
+      };
+
+      await setDoc(newDoc, cleanForFirestore(payment));
+
+      // If linked to invoice, reconcile invoice
+      if (paymentData.invoiceId) {
+        const invRef = doc(db, 'schools', schoolId, 'invoices', paymentData.invoiceId);
+        const invSnap = await getDoc(invRef);
+        if (invSnap.exists()) {
+          const inv = invSnap.data() as Invoice;
+          const newPaid = (inv.paidAmount || 0) + payment.amount;
+          const newBalance = Math.max(0, (inv.totalAmount || 0) - newPaid);
+          const newStatus = newBalance === 0 ? 'PAID' : newPaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID';
+          await setDoc(
+            invRef,
+            cleanForFirestore({
+              paidAmount: newPaid,
+              balance: newBalance,
+              status: newStatus,
+            }),
+            { merge: true }
+          );
+        }
+      }
+
+      // Update student's overall outstanding balance
+      if (currentStudent) {
+        const updatedBalance = Math.max(0, (currentStudent.totalBalance || 0) - payment.amount);
+        await studentService.updateStudent(schoolId, paymentData.studentId, { totalBalance: updatedBalance });
+      }
+
+      return payment;
+    } finally {
+      inFlightPayments.delete(studentLockKey);
+    }
   },
 
   async updatePayment(

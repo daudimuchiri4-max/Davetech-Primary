@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
-import { Printer, CheckCircle, School as SchoolIcon, Zap, FileText, Edit2, Trash2 } from 'lucide-react';
+import {
+  Printer,
+  CheckCircle,
+  School as SchoolIcon,
+  Zap,
+  FileText,
+  Edit2,
+  Trash2,
+  AlertTriangle,
+  Lock,
+  ArrowRight,
+  Check,
+} from 'lucide-react';
 import { Payment, School } from '../../types';
 import { printerService } from '../../services/printerService';
 import { PrinterManagerModal } from './PrinterManagerModal';
@@ -13,6 +25,11 @@ interface ReceiptModalProps {
   school: School | null;
   onEdit?: (payment: Payment) => void;
   onDelete?: (payment: Payment) => void;
+  requirePrintBeforeNext?: boolean;
+  hasPrintedReceipt?: boolean;
+  onReceiptPrinted?: () => void;
+  onProceedToNextTransaction?: () => void;
+  onSkipPrintAndProceed?: () => void;
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
@@ -22,21 +39,95 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   school,
   onEdit,
   onDelete,
+  requirePrintBeforeNext = false,
+  hasPrintedReceipt = false,
+  onReceiptPrinted,
+  onProceedToNextTransaction,
+  onSkipPrintAndProceed,
 }) => {
   const [printerModalOpen, setPrinterModalOpen] = useState(false);
+  const [internalPrinted, setInternalPrinted] = useState(false);
+
+  // Reset internal printed state whenever payment changes
+  React.useEffect(() => {
+    setInternalPrinted(false);
+  }, [payment?.id]);
 
   if (!payment) return null;
 
+  const isPrinted = hasPrintedReceipt || internalPrinted;
+
   const handlePrintA4 = () => {
     printerService.printFeeReceipt(payment, school, 'A4');
+    setInternalPrinted(true);
+    onReceiptPrinted?.();
   };
 
   const handlePrintThermal = () => {
     printerService.printFeeReceipt(payment, school, '80mm');
+    setInternalPrinted(true);
+    onReceiptPrinted?.();
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Official Payment Receipt" maxWidth="lg">
+      {/* Workflow Enforcement Banner: Wait until receipt is printed before doing next transaction */}
+      {requirePrintBeforeNext && !isPrinted && (
+        <div className="mb-4 p-3.5 bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-950 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+              <Printer className="w-5 h-5 text-amber-700 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-black text-xs text-amber-950 uppercase tracking-wide">
+                  Print Receipt Before Next Transaction
+                </h4>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-amber-200 text-amber-900 rounded-md">
+                  Action Required
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-800 mt-0.5">
+                Payment has been credited. The cashier must print the official receipt before starting another transaction.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+            <span className="text-[11px] font-bold text-amber-800 bg-amber-100/90 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1">
+              <Lock className="w-3 h-3 text-amber-700" /> Next Transaction Locked
+            </span>
+          </div>
+        </div>
+      )}
+
+      {requirePrintBeforeNext && isPrinted && (
+        <div className="mb-4 p-3.5 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-950 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+              <CheckCircle className="w-5 h-5 text-emerald-700" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-black text-xs text-emerald-950 uppercase tracking-wide">
+                  Official Receipt Printed Successfully!
+                </h4>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-md">
+                  Cleared
+                </span>
+              </div>
+              <p className="text-[11px] text-emerald-800 mt-0.5">
+                Receipt dispatched to printer. You are now cleared to initiate the next fee payment or exit.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1">
+              <Check className="w-3 h-3 text-emerald-700" /> Ready for Next Transaction
+            </span>
+          </div>
+        </div>
+      )}
+
       <div id="printable-receipt" className="p-6 bg-white border border-slate-200 rounded-xl space-y-6 text-slate-800">
         {/* School Header */}
         <div className="text-center border-b border-slate-200 pb-4">
@@ -249,28 +340,113 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           )}
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-          <Button
-            variant="outline"
-            icon={<Zap className="w-4 h-4" />}
-            onClick={handlePrintThermal}
-            title="Send to 80mm / 58mm Thermal Slip Printer"
-          >
-            Thermal Slip (80mm)
-          </Button>
-          <Button
-            variant="primary"
-            icon={<FileText className="w-4 h-4" />}
-            onClick={handlePrintA4}
-            title="Print Official A4 Document"
-          >
-            Print Official A4
-          </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {requirePrintBeforeNext && !isPrinted ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="text-xs text-slate-600"
+              >
+                Close Window
+              </Button>
+              <Button
+                variant="outline"
+                icon={<Zap className="w-4 h-4 text-amber-600" />}
+                onClick={handlePrintThermal}
+                title="Send to 80mm / 58mm Thermal Slip Printer"
+                className="border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 font-bold"
+              >
+                Print Thermal Slip
+              </Button>
+              <Button
+                variant="primary"
+                icon={<FileText className="w-4 h-4" />}
+                onClick={handlePrintA4}
+                title="Print Official A4 Document"
+                className="bg-blue-900 hover:bg-blue-800 text-white font-bold shadow-xs animate-pulse"
+              >
+                Print Official A4
+              </Button>
+              <Button
+                disabled
+                variant="outline"
+                className="opacity-60 cursor-not-allowed bg-slate-100 text-slate-500 font-bold border-slate-300"
+                icon={<Lock className="w-4 h-4 text-slate-400" />}
+                title="Print receipt first to unlock next transaction"
+              >
+                Next Transaction (Locked)
+              </Button>
+            </>
+          ) : requirePrintBeforeNext && isPrinted ? (
+            <>
+              <Button
+                variant="outline"
+                icon={<Zap className="w-4 h-4" />}
+                onClick={handlePrintThermal}
+                title="Reprint Thermal Slip"
+                className="text-xs"
+              >
+                Thermal (80mm)
+              </Button>
+              <Button
+                variant="outline"
+                icon={<FileText className="w-4 h-4" />}
+                onClick={handlePrintA4}
+                title="Reprint Official A4 Document"
+                className="text-xs"
+              >
+                A4 Document
+              </Button>
+              <Button variant="outline" onClick={onClose}>
+                Done / Close
+              </Button>
+              <Button
+                variant="primary"
+                icon={<ArrowRight className="w-4 h-4" />}
+                onClick={onProceedToNextTransaction || onClose}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold shadow-sm"
+              >
+                Proceed to Next Transaction
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+              <Button
+                variant="outline"
+                icon={<Zap className="w-4 h-4" />}
+                onClick={handlePrintThermal}
+                title="Send to 80mm / 58mm Thermal Slip Printer"
+              >
+                Thermal Slip (80mm)
+              </Button>
+              <Button
+                variant="primary"
+                icon={<FileText className="w-4 h-4" />}
+                onClick={handlePrintA4}
+                title="Print Official A4 Document"
+              >
+                Print Official A4
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {requirePrintBeforeNext && !isPrinted && onSkipPrintAndProceed && (
+        <div className="mt-3 text-right">
+          <button
+            type="button"
+            onClick={onSkipPrintAndProceed}
+            className="text-[11px] text-slate-500 hover:text-amber-800 underline cursor-pointer"
+          >
+            Printer unavailable? Skip printing and unlock next transaction anyway
+          </button>
+        </div>
+      )}
 
       <PrinterManagerModal
         isOpen={printerModalOpen}

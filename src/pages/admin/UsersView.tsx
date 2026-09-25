@@ -67,7 +67,11 @@ const ROLE_CONFIGS: Record<
   STUDENT: { label: 'Student / Learner', category: 'Portal', color: 'bg-purple-900 text-purple-100', badgeVariant: 'info' },
 };
 
-export const UsersView: React.FC = () => {
+interface UsersViewProps {
+  onNavigate?: (view: string) => void;
+}
+
+export const UsersView: React.FC<UsersViewProps> = ({ onNavigate }) => {
   const { school, switchRole, user: currentUser } = useAuth();
   const { showToast } = useToast();
 
@@ -445,6 +449,18 @@ export const UsersView: React.FC = () => {
               Seed Sample Users
             </Button>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<ShieldCheck className="w-4 h-4 text-emerald-600" />}
+            onClick={() => {
+              if (onNavigate) onNavigate('ROLES_PERMISSIONS');
+              else window.location.hash = '#roles-permissions';
+            }}
+          >
+            Role Permission Matrix
+          </Button>
 
           <Button
             variant="primary"

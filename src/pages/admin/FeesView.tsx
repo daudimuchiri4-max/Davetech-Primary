@@ -84,6 +84,10 @@ export const FeesView: React.FC = () => {
 
   // Payment Recording Modal
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const isSubmittingPaymentRef = React.useRef(false);
+  const [pendingReceiptPrintPayment, setPendingReceiptPrintPayment] = useState<Payment | null>(null);
+  const [hasPrintedReceipt, setHasPrintedReceipt] = useState(false);
   const [payFormData, setPayFormData] = useState({
     studentId: '',
     invoiceId: '',
@@ -202,11 +206,22 @@ export const FeesView: React.FC = () => {
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingPaymentRef.current || isSubmittingPayment) return;
+
     const student = students.find((s) => s.id === payFormData.studentId);
     if (!student) {
       showToast('Please select a student', 'error');
       return;
     }
+
+    const payAmount = Number(payFormData.amount);
+    if (!payAmount || payAmount <= 0) {
+      showToast('Please enter a valid payment amount greater than zero', 'error');
+      return;
+    }
+
+    isSubmittingPaymentRef.current = true;
+    setIsSubmittingPayment(true);
 
     try {
       const payment = await feeService.recordPayment(school!.id, {
@@ -216,22 +231,61 @@ export const FeesView: React.FC = () => {
         admissionNumber: student.admissionNumber,
         parentName: student.parentName,
         parentPhone: student.parentPhone,
-        amount: Number(payFormData.amount),
+        amount: payAmount,
         paymentDate: new Date().toISOString().split('T')[0],
         paymentMethod: payFormData.paymentMethod,
-        transactionReference: payFormData.transactionReference || `MPESA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        transactionReference: payFormData.transactionReference?.trim() || `MPESA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
         cashierName: user?.fullName || 'Finance Bursar',
         cashierId: user?.id || 'bursar',
         notes: payFormData.notes,
       });
 
-      showToast(`Payment of ${school?.currencySymbol || 'KSh'} ${payment.amount.toLocaleString()} recorded successfully!`, 'success');
+      showToast(`Payment of ${school?.currencySymbol || 'KSh'} ${payment.amount.toLocaleString()} recorded! Please print the official receipt.`, 'success');
+      
+      // Close payment modal
       setIsPayModalOpen(false);
+
+      // Lock next transaction until receipt is printed
+      setPendingReceiptPrintPayment(payment);
+      setHasPrintedReceipt(false);
       setSelectedPayment(payment);
       setIsReceiptModalOpen(true);
+
+      // Reset payment form cleanly so previous student & amount are not inadvertently double-charged
+      setPayFormData({
+        studentId: '',
+        invoiceId: '',
+        amount: 0,
+        paymentMethod: 'MPESA',
+        transactionReference: '',
+        notes: 'School fee installment',
+      });
+
       await loadFinanceData();
     } catch (e: any) {
-      showToast('Error recording payment: ' + e.message, 'error');
+      showToast(e.message || 'Error recording payment', 'error');
+    } finally {
+      isSubmittingPaymentRef.current = false;
+      setIsSubmittingPayment(false);
+    }
+  };
+
+  // Enforces: "wait until I print receipt before doing another transaction"
+  const handleAttemptNewPayment = (student?: Student) => {
+    if (pendingReceiptPrintPayment && !hasPrintedReceipt) {
+      showToast(
+        `Action Required: Please print receipt #${pendingReceiptPrintPayment.receiptNumber} for ${pendingReceiptPrintPayment.studentName} before starting another transaction!`,
+        'warning'
+      );
+      setSelectedPayment(pendingReceiptPrintPayment);
+      setIsReceiptModalOpen(true);
+      return;
+    }
+
+    if (student) {
+      handleOpenPayForStudent(student);
+    } else {
+      setIsPayModalOpen(true);
     }
   };
 
@@ -552,6 +606,16 @@ export const FeesView: React.FC = () => {
 
   // Open Payment modal for specific student
   const handleOpenPayForStudent = (std: Student) => {
+    if (pendingReceiptPrintPayment && !hasPrintedReceipt) {
+      showToast(
+        `Action Required: Please print receipt #${pendingReceiptPrintPayment.receiptNumber} for ${pendingReceiptPrintPayment.studentName} before starting another transaction!`,
+        'warning'
+      );
+      setSelectedPayment(pendingReceiptPrintPayment);
+      setIsReceiptModalOpen(true);
+      return;
+    }
+
     setPayFormData({
       studentId: std.id,
       invoiceId: '',
@@ -704,12 +768,62 @@ export const FeesView: React.FC = () => {
             variant="primary"
             size="sm"
             icon={<Receipt className="w-4 h-4" />}
-            onClick={() => setIsPayModalOpen(true)}
+            onClick={() => handleAttemptNewPayment()}
           >
             Record Fee Payment
           </Button>
         </div>
       </div>
+
+      {/* Workflow Warning Banner: Print Receipt Before Next Transaction */}
+      {pendingReceiptPrintPayment && !hasPrintedReceipt && (
+        <div className="p-4 bg-amber-500/15 border-2 border-amber-500/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-950 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/25 flex items-center justify-center shrink-0">
+              <Printer className="w-6 h-6 text-amber-800 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-sm text-amber-950 uppercase tracking-wide">
+                  Receipt Pending Print: Receipt #{pendingReceiptPrintPayment.receiptNumber}
+                </span>
+                <Badge variant="warning" className="bg-amber-200 text-amber-950 border border-amber-300 font-extrabold text-[10px]">
+                  Next Transaction Waiting
+                </Badge>
+              </div>
+              <p className="text-xs text-amber-900 mt-1">
+                Student: <span className="font-bold">{pendingReceiptPrintPayment.studentName}</span> ({pendingReceiptPrintPayment.admissionNumber}) • Amount: <span className="font-bold">{school?.currencySymbol || 'KSh'} {pendingReceiptPrintPayment.amount.toLocaleString()}</span>. Please print the customer receipt before doing another transaction.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<Printer className="w-4 h-4" />}
+              onClick={() => {
+                setSelectedPayment(pendingReceiptPrintPayment);
+                setIsReceiptModalOpen(true);
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs"
+            >
+              Print Receipt Now
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setHasPrintedReceipt(true);
+                setPendingReceiptPrintPayment(null);
+                showToast('Receipt requirement cleared. Ready for next transaction.', 'info');
+              }}
+              className="text-xs text-amber-900 border-amber-300 hover:bg-amber-100"
+            >
+              Unlock Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Financial Term Filter Selector Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
@@ -1300,7 +1414,7 @@ export const FeesView: React.FC = () => {
                             <div className="flex items-center justify-end gap-1.5">
                               {/* Direct Record Payment */}
                               <button
-                                onClick={() => handleOpenPayForStudent(std)}
+                                onClick={() => handleAttemptNewPayment(std)}
                                 className="px-2.5 py-1 text-xs font-bold bg-blue-900 hover:bg-blue-950 text-white rounded-lg cursor-pointer transition-colors shadow-2xs flex items-center gap-1"
                                 title="Record Fee Payment for this student"
                               >
@@ -1574,11 +1688,21 @@ export const FeesView: React.FC = () => {
       {/* Record Payment Modal */}
       <Modal
         isOpen={isPayModalOpen}
-        onClose={() => setIsPayModalOpen(false)}
+        onClose={() => {
+          if (!isSubmittingPayment) setIsPayModalOpen(false);
+        }}
         title="Record Fee Payment Receipt"
         maxWidth="md"
       >
         <form onSubmit={handleRecordPayment} className="space-y-3.5 text-xs">
+          {/* Zero Double-Charging Guard Alert */}
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2.5 text-blue-950">
+            <ShieldCheck className="w-5 h-5 text-blue-700 shrink-0" />
+            <div className="text-[11px] leading-tight">
+              <span className="font-bold">Zero Double-Charging Guard Active:</span> In-flight concurrency locks and duplicate reference detection prevent repeat payments. Next transaction will wait until the official receipt is printed.
+            </div>
+          </div>
+
           <StudentSearchSelect
             students={students}
             selectedStudentId={payFormData.studentId}
@@ -1602,20 +1726,22 @@ export const FeesView: React.FC = () => {
               <input
                 type="number"
                 required
+                disabled={isSubmittingPayment}
                 value={payFormData.amount}
                 onChange={(e) => setPayFormData({ ...payFormData, amount: Number(e.target.value) })}
-                className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl font-bold"
+                className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl font-bold disabled:bg-slate-100 disabled:cursor-not-allowed"
               />
             </div>
             <div>
               <label className="font-semibold text-slate-700">Payment Mode *</label>
               <select
+                disabled={isSubmittingPayment}
                 value={payFormData.paymentMethod}
                 onChange={(e) => {
                   const m = e.target.value as any;
                   setPayFormData({ ...payFormData, paymentMethod: m });
                 }}
-                className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl bg-white font-medium"
+                className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl bg-white font-medium disabled:bg-slate-100 disabled:cursor-not-allowed"
               >
                 <option value="MPESA">M-Pesa (Till / Paybill)</option>
                 <option value="BANK_TRANSFER">Bank Slip / Deposit</option>
@@ -1632,10 +1758,11 @@ export const FeesView: React.FC = () => {
             </label>
             <input
               type="text"
+              disabled={isSubmittingPayment}
               placeholder={payFormData.paymentMethod === 'MPESA' ? 'e.g. QKB78219LM' : 'e.g. SLIP-091823'}
               value={payFormData.transactionReference}
               onChange={(e) => setPayFormData({ ...payFormData, transactionReference: e.target.value })}
-              className={`w-full mt-1 px-3 py-2 border rounded-xl font-mono font-bold ${
+              className={`w-full mt-1 px-3 py-2 border rounded-xl font-mono font-bold disabled:bg-slate-100 disabled:cursor-not-allowed ${
                 payFormData.transactionReference.startsWith('QK') || payFormData.transactionReference.startsWith('TK')
                   ? 'border-emerald-400 bg-emerald-50/40 text-emerald-900'
                   : 'border-slate-200'
@@ -1647,9 +1774,10 @@ export const FeesView: React.FC = () => {
             <label className="font-semibold text-slate-700">Payment Description / Remarks</label>
             <input
               type="text"
+              disabled={isSubmittingPayment}
               value={payFormData.notes}
               onChange={(e) => setPayFormData({ ...payFormData, notes: e.target.value })}
-              className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl"
+              className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl disabled:bg-slate-100 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -1657,12 +1785,19 @@ export const FeesView: React.FC = () => {
             <Button
               variant="outline"
               type="button"
+              disabled={isSubmittingPayment}
               onClick={() => setIsPayModalOpen(false)}
             >
               Cancel
             </Button>
-            <Button variant="primary" type="submit" className="bg-blue-900 hover:bg-blue-800 font-bold">
-              Generate Official Receipt
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={isSubmittingPayment || !payFormData.studentId || Number(payFormData.amount) <= 0}
+              className="bg-blue-900 hover:bg-blue-800 font-bold"
+              icon={isSubmittingPayment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Receipt className="w-4 h-4" />}
+            >
+              {isSubmittingPayment ? 'Recording Payment & Verifying...' : 'Generate Official Receipt'}
             </Button>
           </div>
         </form>
@@ -2224,6 +2359,32 @@ export const FeesView: React.FC = () => {
         school={school}
         onEdit={(p) => handleOpenEditPayment(p)}
         onDelete={(p) => handleOpenDeletePayment(p)}
+        requirePrintBeforeNext={!!(pendingReceiptPrintPayment && selectedPayment?.id === pendingReceiptPrintPayment.id && !hasPrintedReceipt)}
+        hasPrintedReceipt={hasPrintedReceipt}
+        onReceiptPrinted={() => {
+          setHasPrintedReceipt(true);
+          showToast('Official receipt printed! You can now proceed to the next transaction.', 'success');
+        }}
+        onProceedToNextTransaction={() => {
+          setPendingReceiptPrintPayment(null);
+          setHasPrintedReceipt(false);
+          setIsReceiptModalOpen(false);
+          setPayFormData({
+            studentId: '',
+            invoiceId: '',
+            amount: 0,
+            paymentMethod: 'MPESA',
+            transactionReference: '',
+            notes: 'School fee installment',
+          });
+          setIsPayModalOpen(true);
+        }}
+        onSkipPrintAndProceed={() => {
+          setPendingReceiptPrintPayment(null);
+          setHasPrintedReceipt(true);
+          setIsReceiptModalOpen(false);
+          showToast('Receipt print requirement cleared. Ready for next transaction.', 'info');
+        }}
       />
 
       {/* Student Profile Modal Trigger */}
@@ -2234,8 +2395,7 @@ export const FeesView: React.FC = () => {
         school={school}
         onRecordPayment={(std) => {
           setIsStudentProfileOpen(false);
-          setPayFormData((prev) => ({ ...prev, studentId: std.id }));
-          setIsPayModalOpen(true);
+          handleAttemptNewPayment(std);
         }}
       />
 
